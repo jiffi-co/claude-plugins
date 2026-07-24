@@ -1,0 +1,20 @@
+{
+  "name": "jiffi-claude-plugins",
+  "owner": {
+    "name": "Jiffi",
+    "url": "https://ai.jiffi.co"
+  },
+  "metadata": {
+    "description": "Jiffi's Claude Code plugins for building well-built AI products."
+  },
+  "plugins": [
+    {
+      "name": "builder-kit",
+      "source": "./plugins/builder-kit",
+      "description": "The Jiffi build workflow as an installable kit — take a raw idea to a shipped, well-built product and keep iterating: verify setup, scaffold, idea -> PRD -> ADRs -> plan, the phase-by-phase build loop with deterministic gates, test & verify, CI/CD, ship, ops, and add-a-feature-to-a-live-product.",
+      "author": { "name": "Jiffi" },
+      "homepage": "https://ai.jiffi.co",
+      "license": "UNLICENSED"
+    }
+  ]
+}

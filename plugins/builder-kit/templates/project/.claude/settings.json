@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "deny": ["Read(.env)", "Read(.env.*)"]
+  },
+  "extraKnownMarketplaces": {
+    "jiffi-claude-plugins": {
+      "source": { "source": "github", "repo": "jiffi-co/claude-plugins" }
+    }
+  },
+  "enabledPlugins": ["builder-kit@jiffi-claude-plugins"]
+}

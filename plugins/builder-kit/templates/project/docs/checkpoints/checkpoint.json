@@ -1,0 +1,11 @@
+{
+  "_comment": "Per-project gate. Tighten per phase in docs/checkpoints/phase-<n>.json. Once you have a test script, drop optional:true on tests so a red suite blocks the phase.",
+  "checks": [
+    { "id": "prd", "label": "PRD exists", "kind": "mechanical", "type": "file-exists", "path": "docs/prd/prd.md" },
+    { "id": "checklist", "label": "Acceptance checklist exists", "kind": "mechanical", "type": "file-exists", "path": "docs/prd/acceptance-checklist.md" },
+    { "id": "plan", "label": "Implementation plan exists", "kind": "mechanical", "type": "file-exists", "path": "docs/implementation-plan.md" },
+    { "id": "tests", "label": "Test suite passes", "kind": "mechanical", "type": "command", "cmd": "npm test --silent", "expectExit": 0, "optional": true },
+    { "id": "acs", "label": "Phase acceptance criteria ticked", "kind": "mechanical", "type": "checklist-done", "path": "docs/prd/acceptance-checklist.md", "optional": true },
+    { "id": "committed", "label": "Phase committed and pushed", "kind": "semantic", "type": "advisory", "note": "confirm the phase branch is committed and pushed" }
+  ]
+}
