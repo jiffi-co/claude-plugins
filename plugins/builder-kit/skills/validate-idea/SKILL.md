@@ -75,4 +75,4 @@ _Date: <YYYY-MM-DD>_
 Status: PASS | NEEDS WORK — <which conditions are unmet>
 ```
 
-Reference (full Phase-0 rationale): `docs/strategy/2026-07/guide-audit/corrected/prototype-creation-web/00-phase-0-validate-your-idea.md`.
+This gate captures the full Phase-0 rationale: a sharp one-liner, a named workflow, a specific daily user, and a clear picture of success.

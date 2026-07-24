@@ -1,6 +1,6 @@
 ---
 name: implementation-plan
-description: Turn the approved PRD and accepted ADRs into docs/implementation-plan.md — phases each carrying the ACs they deliver, an execution mode, a definition of done, and a required per-phase verification check Claude can run. Use when the PRD and ADRs are done and the user asks to plan the build, or says /plan.
+description: Turn the approved PRD and accepted ADRs into docs/implementation-plan.md — phases each carrying the ACs they deliver, an execution mode, a definition of done, and a required per-phase verification check Claude can run. Use when the PRD and ADRs are done and the user asks to plan the build, or says /implementation-plan.
 allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, AskUserQuestion]
 ---
 
@@ -10,7 +10,7 @@ Produce the build blueprint an agent follows one phase at a time: `docs/implemen
 
 ## When to use / when not
 
-- Use after the PRD is approved and the ADRs are accepted, when the user asks to plan the build or says `/plan`.
+- Use after the PRD is approved and the ADRs are accepted, when the user asks to plan the build or says `/implementation-plan`.
 - Do not use before the PRD or ADRs exist — run `prd` / `create-adr` first. Do not use to write code; this produces the plan only.
 
 ## Process
@@ -37,15 +37,15 @@ Produce the build blueprint an agent follows one phase at a time: `docs/implemen
    - **Sub-agents** — independent parallel tasks with no cross-talk. This is the default parallelism story (subagents run in the background); use worktrees when they need separate checkouts.
    - **Agent Team** — only when teammates must coordinate against a shared contract. Still experimental and opt-in (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`); if chosen, list the team composition (roles and owned directories, matching the AGENTS.md table) and the spawn context each teammate needs.
 5. Write the **verification field** so it is genuinely runnable. Phrase each as one of: a command (`npm test`, `npx tsc --noEmit`, a curl asserting a status), a file that must exist, or a regex/heading that must be present. This is the contract `/checkpoint` enforces — an advisory "looks done" is not acceptable.
-6. Show the full plan to the user and revise before writing anything downstream. The plan is a work product; the human's review is the gate. Do not silently proceed to Beads or checkpoint manifests.
+6. Show the full plan to the user and revise before writing anything downstream. Before the user approves, suggest a fresh-context review with the `review-build-plan` agent (via the Task/subagent tool) to catch phasing, prerequisite and verification gaps a fresh reader would spot. The plan is a work product; the human's review is the gate. Do not silently proceed to Beads or checkpoint manifests.
 7. After approval, optionally emit the machine-readable siblings beside the human plan:
    - **Per-phase checkpoint manifests** — for each phase, write `docs/checkpoints/phase-<N>.json` turning that phase's verification field into a mechanical check the shipped gate runs. Types available: `command`, `file-exists`, `grep-min`, `heading`, `checklist-done` (see `scripts/checkpoint-manifest.json` for the shape). Mark tightened checks `"kind": "mechanical"`.
-   - **Beads issues** — one per phase, prerequisite phases first, parallelisable phases noted in both:
+   - **Per-phase issues** — one per phase, prerequisite phases first, parallelisable phases noted in both. If you use Beads:
      ```bash
      bd create --title "Phase <N> — <name>" --body "<branch, mode, US/AC numbers, prereqs, definition of done>"
      bd list   # show the user to verify ordering
      ```
-     Native Tasks track the in-session work; Beads is the cross-session, dependency-aware memory this plan needs. Run `bd setup claude` once if Beads is not wired in yet.
+     otherwise track the same per-phase state with native Tasks or a simple `docs/tasks.md` checklist. Beads (if wired in) gives cross-session, dependency-aware memory; run `bd setup claude` once if it is not set up yet.
 8. Update `CLAUDE.md`: set current phase to "Ready to build — Phase 1" and point to `docs/implementation-plan.md`.
 
 ## Rules
@@ -60,5 +60,5 @@ Produce the build blueprint an agent follows one phase at a time: `docs/implemen
 ## Output
 
 - `docs/implementation-plan.md` — the phased plan, each phase in the block shape above.
-- Optional, after approval: `docs/checkpoints/phase-<N>.json` (one per phase) and Beads issues via `bd create`.
+- Optional, after approval: `docs/checkpoints/phase-<N>.json` (one per phase) and per-phase issues (Beads via `bd create` if used, otherwise native Tasks or a `docs/tasks.md` checklist).
 - `CLAUDE.md` updated to point at the plan and mark the build ready.

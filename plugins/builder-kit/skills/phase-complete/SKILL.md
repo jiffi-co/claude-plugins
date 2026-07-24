@@ -1,6 +1,6 @@
 ---
 name: phase-complete
-description: Use when the build steps for a phase are finished and the user asks to close, wrap up, or complete a phase, or says /phase-complete — runs the deterministic checkpoint, verifies ACs with evidence, ticks the checklist, closes the Beads issue, writes learnings back to CLAUDE.md/rules/ADRs, then commits and suggests /clear.
+description: Use when the build steps for a phase are finished and the user asks to close, wrap up, or complete a phase, or says /phase-complete — runs the deterministic checkpoint, verifies ACs with evidence, ticks the checklist, marks this phase's task done, writes learnings back to CLAUDE.md/rules/ADRs, then commits and suggests /clear.
 allowed-tools: [Read, Edit, Bash, Grep, Glob, AskUserQuestion]
 ---
 
@@ -30,7 +30,7 @@ Turns "the code seems done" into a phase that is provably done: a deterministic 
 
 4. **Tick the checklist and advance the phase pointer.** In `docs/prd/acceptance-checklist.md`, mark every evidenced AC `[x]`. In `CLAUDE.md`, set "Current phase" to the next phase (or "Complete" if this was the last).
 
-5. **Close the Beads issue.** `bd close <issue-id>` for this phase's issue (note: `bd close`, not `bd complete`).
+5. **Mark this phase's task done.** If you use Beads: `bd close <issue-id>` for this phase's issue (note: `bd close`, not `bd complete`). Otherwise mark the task done in your native Tasks or in `docs/tasks.md`.
 
 6. **COMPOUND — write learnings back to disk before clearing context.** This is the step that makes the next phase smarter. Review what this phase taught you and record it where the NEXT session will actually read it:
    - **New invariants / gotchas / conventions** → append to `CLAUDE.md` or the relevant file in `rules/` (e.g. "this ORM needs X", "always run migrations before tests").
@@ -53,7 +53,7 @@ Turns "the code seems done" into a phase that is provably done: a deterministic 
 - The compound write-back (step 6) happens BEFORE `/clear` — context cleared without it loses the learning.
 - An architecture decision surfaced mid-build is the HUMAN's call to ADR-ify; prompt, do not auto-decide.
 - Never `git add -A` or `git add .` while other agents may be active — stage explicit paths only.
-- docs/, ADRs, the acceptance checklist and Beads are the source of truth. If it is not on disk, it did not happen.
+- docs/, ADRs, the acceptance checklist and your task tracker (Beads if used, otherwise `docs/tasks.md`) are the source of truth. If it is not on disk, it did not happen.
 
 ## Output
 
@@ -61,4 +61,4 @@ Edits, not new files, at conventional paths:
 - `docs/prd/acceptance-checklist.md` — this phase's ACs marked `[x]`.
 - `CLAUDE.md` "Current phase" advanced; plus any new invariants appended (step 6).
 - `rules/*` and/or `docs/adr/ADR-<n>-*.md` — learnings and any new ADR (step 6).
-- Beads issue closed (`bd close`); a commit on the feature branch, pushed.
+- This phase's task marked done (if you use Beads: `bd close`; otherwise native Tasks or `docs/tasks.md`); a commit on the feature branch, pushed.

@@ -31,7 +31,7 @@ Drives the running app with Playwright MCP and checks every changed page against
    Any sub-threshold pair is CRITICAL and blocks completion until fixed.
 7. **Emotional target check.** For each page, state its spec's emotional target in one line, then judge: does the built page actually land it? Flag pages that read flat or generic.
 8. **Fix the mechanical failures.** Fix every CRITICAL and HIGH that is objective (broken layout, console errors, contrast, missing states, token drift, missing hover/focus). After each fix wait for hot reload, re-screenshot the affected page in both themes, and confirm no regression. If a fix touches a shared component, re-check every in-scope page that uses it.
-9. **Surface taste, do not auto-decide.** Where a page fails the emotional target or feels generic but is technically compliant, STOP and ask the human with AskUserQuestion before applying any bold restyle (for example Impeccable bolder / distill / polish). Present the finding, one or two options, and the tradeoff. The design-taste call is theirs.
+9. **Surface taste, do not auto-decide.** Where a page fails the emotional target or feels generic but is technically compliant, STOP and ask the human with AskUserQuestion before applying any bold restyle (if you have the Impeccable skills installed, its bolder / distill / polish are handy here, but they are optional). Present the finding, one or two options, and the tradeoff. The design-taste call is theirs.
 10. **Write the report** at `docs/checkpoints/ui-review-[phase].md` (see Output), then hand back for the human review gate.
 
 ## Rules

@@ -10,13 +10,13 @@ Turns the acceptance checklist from an honour-system tick-box into an evidence l
 
 ## When to use / when not
 
-- Use after the build and (for frontend work) the UI review are done for a phase, once tests pass and coverage is at or above 80 percent. This is Step 7 of Test and Verify.
+- Use after the build and (for frontend work) the UI review are done for a phase, once tests pass and coverage is at or above 80 percent. This is the verification stage of the workflow.
 - Do not use to decide whether the work is good enough to ship, that is human code review and the deploy gate. This skill proves each AC is met; it does not approve the phase.
 - Do not tick an AC you cannot back with an artifact. A missing artifact is a fail, not a pass.
 
 ## Process
 
-1. **Scope the ACs.** Read `docs/implementation-plan.md` and the phase's Beads issue (`bd show <id>`) to find which user stories and ACs this phase is meant to satisfy. If the mapping is ambiguous, STOP and confirm the AC list with the user via AskUserQuestion, never guess the scope.
+1. **Scope the ACs.** Read `docs/implementation-plan.md` and the phase's tracked issue (if you use Beads: `bd show <id>`; otherwise the matching native Task or `docs/tasks.md` entry) to find which user stories and ACs this phase is meant to satisfy. If the mapping is ambiguous, STOP and confirm the AC list with the user via AskUserQuestion, never guess the scope.
 2. **Read the checklist.** Read `docs/prd/acceptance-checklist.md`. Work only the ACs in scope for this phase; leave the rest untouched.
 3. **For each in-scope AC, locate the code.** Use Grep/Glob/Read to find the implementing code. If nothing implements it, mark it not met and move on, do not write the code here.
 4. **Produce evidence, matched to the AC type.** Every AC gets exactly one artifact, captured, not asserted from reading:

@@ -13,6 +13,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync, rmSync, statSync } from 'node:fs'
 import { dirname, join, resolve, basename } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { execSync } from 'node:child_process'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const TEMPLATES = join(HERE, '..', 'templates', 'project')
@@ -95,21 +96,59 @@ try {
 } catch (err) {
   console.error(`\nScaffold failed: ${err.message}`)
   console.error('Rolling back everything this run created...')
-  for (const p of created.reverse()) {
+  if (newProject) {
+    // A named new project got its own directory (the refuse-non-empty check
+    // guaranteed it was new/empty), so the only clean rollback is to remove the
+    // whole thing — including the intermediate parents mkdirSync created.
     try {
-      if (existsSync(p)) {
-        const isDir = statSync(p).isDirectory()
-        if (isDir && readdirSync(p).length > 0) continue // never remove a dir that now holds pre-existing files
-        rmSync(p, { recursive: true, force: true })
-      }
+      rmSync(targetDir, { recursive: true, force: true })
     } catch {}
+  } else {
+    for (const p of created.reverse()) {
+      try {
+        if (existsSync(p)) {
+          const isDir = statSync(p).isDirectory()
+          if (isDir && readdirSync(p).length > 0) continue // never remove a dir that holds pre-existing files
+          rmSync(p, { recursive: true, force: true })
+        }
+      } catch {}
+    }
   }
   console.error('Rolled back. No partial scaffold left behind.')
   process.exit(1)
 }
 
+// Initialise git so the build loop (feature branches, commit-after-green, PRs)
+// works from the very first phase. Skip if the folder is already in a repo.
+let gitNote = ''
+try {
+  const alreadyRepo = existsSync(join(targetDir, '.git')) || (() => {
+    try {
+      execSync('git rev-parse --is-inside-work-tree', { cwd: targetDir, stdio: 'ignore' })
+      return true
+    } catch {
+      return false
+    }
+  })()
+  if (!alreadyRepo) {
+    execSync('git init -q -b main', { cwd: targetDir })
+    execSync('git add -A', { cwd: targetDir })
+    // Author the scaffold commit with a per-commit fallback identity (via -c, so
+    // it never touches the user's own git config — their real commits use their
+    // own name). This guarantees a `main` ref exists so phase-start can branch.
+    execSync(
+      'git -c user.name="builder-kit" -c user.email="scaffold@builder-kit.local" commit -q -m "chore: scaffold via jiffi-init" --no-verify',
+      { cwd: targetDir },
+    )
+    gitNote = 'git: initialised (branch main, one scaffold commit)'
+  }
+} catch {
+  gitNote = 'git: not initialised (git not found — install it, then `git init`)'
+}
+
 console.log(`\n✅ Scaffolded "${projectName}" at ${targetDir}`)
 console.log(`   created: ${report.created.length} file(s)/dir(s)`)
+if (gitNote) console.log(`   ${gitNote}`)
 if (report.skipped.length) console.log(`   skipped (already existed): ${report.skipped.join(', ')}`)
 console.log('\nWhat you got:')
 console.log('  CLAUDE.md + AGENTS.md      the project context + coordination contract (@AGENTS.md wired)')

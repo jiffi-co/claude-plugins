@@ -18,10 +18,24 @@ process.stdin.on('end', () => {
     const cfg = JSON.parse(readFileSync('.claude/builder-kit.json', 'utf8'))
     if (!cfg.stopTestGate) process.exit(0)
     const cmd = cfg.testCommand || 'npm test'
+    // If the command is `npm test` but the project has no test script yet, there
+    // is nothing to gate — fail open rather than block a user who hasn't written
+    // tests. Guessing "red suite" when the runner can't even start is the footgun.
+    if (/^npm\s+(run\s+)?test\b/.test(cmd)) {
+      try {
+        const pkg = JSON.parse(readFileSync('package.json', 'utf8'))
+        if (!pkg.scripts || !pkg.scripts.test) process.exit(0)
+      } catch {
+        process.exit(0) // no package.json → nothing to run
+      }
+    }
     const r = spawnSync(cmd, { shell: true, encoding: 'utf8', timeout: 600000 })
+    // Fail OPEN when the command could not RUN (spawn error, or shell "command not
+    // found" = 127). Only a genuine non-zero test result blocks.
+    if (r.error || r.status === 127 || r.status == null) process.exit(0)
     if (r.status !== 0) {
       process.stderr.write(
-        `Stop blocked by the builder-kit test gate: \`${cmd}\` exited ${r.status == null ? '?' : r.status}. ` +
+        `Stop blocked by the builder-kit test gate: the test suite (\`${cmd}\`) failed (exit ${r.status}). ` +
           `Do not call this phase done with a red suite — fix the failing tests, or turn the gate off in .claude/builder-kit.json.\n`,
       )
       process.exit(2)

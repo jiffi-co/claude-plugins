@@ -37,7 +37,9 @@ const CHECKS = [
       const v = firstVersion(r.out)
       const major = Number(v.split('.')[0] || 0)
       if (!r.ok || !v) return { status: 'fail', found: 'not found' }
-      return { status: major >= 22 ? 'ok' : 'warn', found: `v${v}`, note: major >= 22 ? '' : 'below the Node 22 floor for current stacks' }
+      // Below the floor is a CORE fail, not a warning — current stacks (Next.js 16,
+      // Vite, etc.) need Node 22+, so "ready" would be a lie on Node 18/20.
+      return { status: major >= 22 ? 'ok' : 'fail', found: `v${v}`, note: major >= 22 ? '' : 'below the Node 22 floor — upgrade before building' }
     },
   },
   {
@@ -75,8 +77,11 @@ const CHECKS = [
   {
     tier: 'recommended', name: 'Docs MCP (Context7)', fix: 'builder-kit bundles Context7 in .mcp.json (auto-starts when the plugin is enabled). Enable the plugin and reload.',
     probe() {
-      // Best-effort: look for a context7 reference in a project or user .mcp.json.
-      for (const p of ['.mcp.json', `${process.env.HOME || ''}/.claude.json`]) {
+      // Best-effort: look for a context7 reference in a project or user config.
+      // HOME on unix, USERPROFILE on Windows.
+      const home = process.env.HOME || process.env.USERPROFILE || ''
+      const candidates = ['.mcp.json', home && `${home}/.claude.json`, home && `${home}/.claude/.mcp.json`].filter(Boolean)
+      for (const p of candidates) {
         try {
           if (existsSync(p) && /context7/i.test(readFileSync(p, 'utf8'))) return { status: 'ok', found: `configured in ${p}` }
         } catch {}
@@ -97,7 +102,7 @@ const CHECKS = [
 const PROJECT = [
   { name: 'CLAUDE.md', path: 'CLAUDE.md', fix: 'Run /jiffi-init to scaffold it.' },
   { name: 'AGENTS.md', path: 'AGENTS.md', fix: 'Run /jiffi-init.' },
-  { name: '.claude/settings.json (deny .env)', path: '.claude/settings.json', fix: 'Run /jiffi-init — it writes the deny-.env rule.', check: (b) => /\.env/.test(b) },
+  { name: '.claude/settings.json (deny .env)', path: '.claude/settings.json', fix: 'Run /jiffi-init — it writes the deny-.env rule.', check: (b) => /"deny"\s*:\s*\[[^\]]*\.env/.test(b) || /(Read|Bash)\([^)]*\.env/.test(b) },
   { name: 'docs/prd/', path: 'docs/prd', fix: 'Run the prd skill.' },
   { name: 'docs/adr/', path: 'docs/adr', fix: 'Run the create-adr skill.' },
   { name: 'docs/implementation-plan.md', path: 'docs/implementation-plan.md', fix: 'Run the implementation-plan skill.' },

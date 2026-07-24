@@ -15,8 +15,12 @@ process.stdin.on('end', () => {
   try {
     const input = JSON.parse(raw || '{}')
     const ti = input.tool_input || {}
-    const path = String(ti.file_path || '')
-    const content = String(ti.content ?? ti.new_string ?? '')
+    // Normalise Windows backslashes so the path anchors work on every OS.
+    const path = String(ti.file_path || '').replace(/\\/g, '/')
+    // Scan Write/Edit content AND MultiEdit's edits[] — a MultiEdit payload has no
+    // top-level content/new_string, so without this its writes went unscanned.
+    const edits = Array.isArray(ti.edits) ? ti.edits.map((e) => e && e.new_string ? e.new_string : '').join('\n') : ''
+    const content = String(ti.content ?? ti.new_string ?? '') + '\n' + edits
 
     // Never let the agent write a real .env file. Templates named .env.example
     // (placeholders) are fine and must not be blocked.
@@ -31,7 +35,7 @@ process.stdin.on('end', () => {
     // Flag obvious LIVE secrets in the content being written. Kept deliberately
     // narrow (live-key shapes only) to avoid false positives on placeholders.
     const liveSecret =
-      /(sk_live_[A-Za-z0-9]{16,}|rk_live_[A-Za-z0-9]{16,}|AKIA[0-9A-Z]{16}|-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|xox[baprs]-[A-Za-z0-9-]{10,}|ghp_[A-Za-z0-9]{36})/
+      /(sk_live_[A-Za-z0-9]{16,}|rk_live_[A-Za-z0-9]{16,}|sk-ant-[A-Za-z0-9_-]{20,}|sk-proj-[A-Za-z0-9_-]{20,}|sk-[A-Za-z0-9]{32,}|AIza[0-9A-Za-z_-]{35}|AKIA[0-9A-Z]{16}|-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|xox[baprs]-[A-Za-z0-9-]{10,}|gh[pousr]_[A-Za-z0-9]{36})/
     if (liveSecret.test(content)) {
       process.stderr.write(
         'Refusing to write: the content contains what looks like a LIVE secret ' +

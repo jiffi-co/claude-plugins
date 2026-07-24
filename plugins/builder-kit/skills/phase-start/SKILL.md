@@ -16,12 +16,12 @@ The load-bearing middle of the build. This gets one phase onto its own branch wi
 ## Process
 
 1. **Fresh context.** Confirm we are starting clean. If the window is already loaded from prior work, tell the user to `/clear` first. A phase begins on a clean context, no exceptions.
-2. **Load live state**, do not trust memory:
+2. **Load live state**, do not trust memory. If you use Beads:
    ```bash
    bd status          # where the project is, which issues are open
    bd ready           # the issues unblocked and ready to work now
    ```
-   Read `docs/implementation-plan.md` (the matching phase section), `docs/prd/acceptance-checklist.md` (the ACs this phase owns), `AGENTS.md` (file ownership) and `docs/interfaces.md` (integration points). Use Grep/Glob to locate existing code the phase touches rather than reading whole files.
+   Otherwise track the same state with native Tasks or a simple `docs/tasks.md` checklist. Read `docs/implementation-plan.md` (the matching phase section), `docs/prd/acceptance-checklist.md` (the ACs this phase owns), `AGENTS.md` (file ownership) and `docs/interfaces.md` (integration points). Use Grep/Glob to locate existing code the phase touches rather than reading whole files.
 3. **Cut the branch** from an up-to-date `main`, never build on `main`:
    ```bash
    git switch main && git pull
@@ -42,7 +42,7 @@ The load-bearing middle of the build. This gets one phase onto its own branch wi
    - Run the relevant tests after each meaningful change.
    - When they pass green, commit that increment (`git commit -m "phase <N>: <step>"`).
    - Move to the next step. Do not paste all steps at once.
-8. **When stuck** on one problem after **two failed correction attempts**, stop. Do not keep patching a full context. Tell the user to `/clear`, then restart the step with a sharper, more constrained prompt. Reach for the bundled `/debug` skill on a bug that needs tracing back through the call stack, `/rewind` to undo a bad turn (conversation and code), and `gh run view --log-failed` on a CI failure.
+8. **When stuck** on one problem after **two failed correction attempts**, stop. Do not keep patching a full context. Tell the user to `/clear`, then restart the step with a sharper, more constrained prompt. If your Claude Code has a `/debug` skill, reach for it on a bug that needs tracing back through the call stack (otherwise trace it inline), `/rewind` to undo a bad turn (conversation and code), and `gh run view --log-failed` on a CI failure.
 9. When all the phase's steps are done and tests are green, hand off to **`phase-complete`** for the closeout.
 
 ## Rules
@@ -51,7 +51,7 @@ The load-bearing middle of the build. This gets one phase onto its own branch wi
 - One step at a time. Handing the agent the whole phase at once is the failure mode this skill exists to prevent.
 - Verify library APIs with Context7 before planning code. Stale API recall is the dominant build bug.
 - The execution-mode choice and the go-ahead on the brief are the human's calls. Prompt, never auto-decide.
-- Load state from `bd status` / `bd ready` and the on-disk plan, never from chat history.
+- Load state from the on-disk plan and your tracker (if you use Beads: `bd status` / `bd ready`; otherwise native Tasks or `docs/tasks.md`), never from chat history.
 - Between phases, `/clear` is non-negotiable. Within a phase, after two dead-end corrections, `/clear` and rewrite.
 
 ## Output

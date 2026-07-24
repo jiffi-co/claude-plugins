@@ -11,7 +11,7 @@ Fast orientation across the on-disk state. Reads the plan, the checklist, Beads 
 ## When to use / when not
 
 - **Use** after a `/clear`, at the start of a new session, or when asked "where am I / what phase / what's next / is anything blocking me".
-- **Not** for doing the work: to plan a phase use the plan skill, to build use the phase-start loop, to verify ACs use test-and-verify. This only reports.
+- **Not** for doing the work: to plan a phase use implementation-plan, to build use the phase-start loop, to verify ACs use verify-acs. This only reports.
 
 ## Process
 
@@ -24,13 +24,13 @@ Fast orientation across the on-disk state. Reads the plan, the checklist, Beads 
    ```
    Note the branch (is it a `feature/phase-N-*` branch or `main`?), whether the tree is dirty, and the last few commits.
 
-2. **Beads** — the cross-session project memory and dependency graph:
+2. **Beads (optional)** — the cross-session project memory and dependency graph. If you use Beads:
 
    ```bash
    bd status
    bd ready
    ```
-   `bd status` shows open issues and which phase; `bd ready` shows what is unblocked next. If `bd` is not found or errors, say so plainly and carry on with the file-based signals (do not guess a phase from silence).
+   `bd status` shows open issues and which phase; `bd ready` shows what is unblocked next. Otherwise track the same state with native Tasks or a simple `docs/tasks.md` checklist. If `bd` is not found or errors, say so plainly and carry on with the file-based signals (do not guess a phase from silence).
 
 3. **The plan** — read `docs/implementation-plan.md`. Find the phase that matches the current branch / Beads issue: its ordered steps, its acceptance criteria, and its definition of done.
 

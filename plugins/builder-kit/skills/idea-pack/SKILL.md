@@ -32,6 +32,7 @@ Produce a build-ready Idea Pack that front-loads the thinking. Interview first, 
 
 - Australian English. Plain, direct language. No filler.
 - Every claim about users or the market is a stated assumption unless the user gave you evidence.
+- For a fresh-context second opinion before approval, run the review-idea-pack agent (via the Task/subagent tool). It is advisory only.
 - Do not proceed to the PRD until the user approves the Idea Pack. Approval is a human gate.
 
 ## Output

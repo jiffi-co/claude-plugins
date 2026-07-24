@@ -25,6 +25,8 @@ Turns a green feature branch into a merged, deployed, verified release. It autom
    ```
    `/code-review` runs over the branch diff; raise its effort (high/max) for wider coverage on risky changes. Fix findings, or pass `--fix` for the straightforward ones. `/security-review` catches secrets, injection and auth gaps before the PR. Re-run until clean. A "no high-confidence issues" result is a good sign, NOT a substitute for the human review at step 5.
 
+   Then route to the fresh-context reviewer agents (via the Task/subagent tool, not slash commands): the `security-auditor` agent for a deeper, project-aware security pass, and — for a web build — the `seo-specialist` agent to check the crawlable pages against the SEO checklist. Fix what they raise and re-run until clean. These agent reviews sit alongside the bundled reviews above; none of them replaces the human code review at step 5.
+
 3. **Open the PR via `gh`.** Draft a description from the diff and the checklist, then create it:
    ```bash
    gh pr create --base main --head "$(git branch --show-current)" \

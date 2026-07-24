@@ -29,5 +29,5 @@ Convert `docs/idea/idea-pack.md` into a specification an agent can build against
 ## Rules
 
 - Every acceptance criterion must be **agent-runnable**: a test, a build check, or a request you can make and assert on. If you cannot see how to test it, rewrite it until you can.
-- Pair the human-readable checklist with the numbered ACs so `test-and-verify` can tick them off one by one.
+- Pair the human-readable checklist with the numbered ACs so `verify-acs` can tick them off one by one.
 - Do not start architecture until the PRD is approved.

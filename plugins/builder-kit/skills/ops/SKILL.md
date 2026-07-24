@@ -11,7 +11,7 @@ The house rules for running Claude Code and a live product well: manage context 
 ## When to use / when not
 
 - Use when: the user asks how to manage context or cost, wants error monitoring set up, asks how to update their tools, or wants the monthly freshness routine. Also use as the standing reference between phases.
-- Not for: building features (that is `plan` then `phase-start`), shipping (`ship`), or debugging a specific failure (`/debug`, or the troubleshooting reference).
+- Not for: building features (that is `implementation-plan` then `phase-start`), shipping (`ship`), or debugging a specific failure (trace the bug inline, or use `/debug` if your Claude Code ships it).
 - This skill PROMPTS on judgement calls (budget, model choice, when to clear). It never decides them for the user.
 
 ## Process
@@ -34,7 +34,7 @@ Context is the number-one cause of Claude degrading. Enforce as house rules:
 - Check spend with `/usage` (`/cost` still works as an alias) — it shows current session token usage.
 - Ask the user for a weekly or monthly budget per person and record it; there is no built-in spending cap, so this is discipline. Use AskUserQuestion if they have not set one.
 - Levers: `/effort` (low through max) to dial down routine work; `opusplan` for Opus-planning / cheaper-execution; keep context clean; use subagents for focused tasks; be specific in prompts. Note `/fast` runs Opus at premium pricing — a cost **increaser**, flag it so nobody trips it by accident.
-- Model choice is the user's call and account-dependent (see the `plan`/model decision guide). Do not hard-recommend one.
+- Model choice is the user's call and account-dependent (see the `implementation-plan` model decision guide). Do not hard-recommend one.
 - Agent Teams use materially more tokens than a single session — reach for them only when the work genuinely needs parallel sessions; subagents are the default way to parallelise.
 
 ### 3. Monitoring (Sentry)
@@ -54,11 +54,11 @@ For a live product, wire up error monitoring so you hear about failures before u
 - **Health check:** `claude doctor` from the shell, or `/doctor` in-session. The old `claude /doctor` form does not work.
 - **Beads:** update from `gastownhall/beads` (Dolt-backed); check its README for the current command.
 - **Plugins:** run `/plugin marketplace update` at the start of each module, then `/reload-plugins` if prompted.
-- After a major Claude Code update, re-run `verify-setup` to confirm everything still works.
+- After a major Claude Code update, re-run `/jiffi-doctor` to confirm everything still works.
 
 ### 5. Monthly freshness routine
 
-Ecosystem churn outpaces any static doc. Once a month, walk the project's pinned versions, URLs and tool claims against live sources, and open a Beads issue per rotted claim:
+Ecosystem churn outpaces any static doc. Once a month, walk the project's pinned versions, URLs and tool claims against live sources, and track one item per rotted claim. If you use Beads: `bd create -t "Freshness: <claim that went stale>"`; otherwise track the same in native Tasks or a simple `docs/tasks.md` checklist.
 ```bash
 bd create -t "Freshness: <claim that went stale>"
 ```
@@ -82,5 +82,5 @@ Keep a "verified against" note (tool versions + date) on docs that pin versions.
 This is a reference skill; it writes files only when a section acts:
 
 - Section 3 (monitoring): Sentry config files created by its wizard, DSN in environment config (never tracked).
-- Section 5 (freshness): one `bd` issue per stale claim; optional "verified against" note in the relevant doc.
+- Section 5 (freshness): one tracked item per stale claim (a `bd` issue if you use Beads, otherwise a native Task or `docs/tasks.md` line); optional "verified against" note in the relevant doc.
 - Section 6: appends to `docs/decisions.md` or writes `docs/adr/NNNN-*.md` via the dedicated skills, not inline here.

@@ -24,11 +24,11 @@ Rebuilds the working state from files, not chat memory. Reads the decision log, 
    ls docs/checkpoints/ 2>/dev/null && cat docs/checkpoints/*.md 2>/dev/null | tail -c 4000
    ```
    Use Read for anything you need in full. `docs/decisions.md` and the ADRs tell you what has already been decided; do not relitigate them.
-2. Read live task state. Beads first, native Tasks or `docs/tasks.md` as the fallback if `bd` errors:
+2. Read live task state. If you use Beads, read it first; otherwise (Beads is optional and may not be installed) read the same state from native Tasks or `docs/tasks.md`:
    ```bash
    bd status 2>/dev/null && bd list --status open 2>/dev/null
    ```
-   If `bd` fails, check `docs/tasks.md` and note Beads is down (see the troubleshooting skill for recovery).
+   If `bd` is absent or errors, check native Tasks or `docs/tasks.md` and note Beads is unavailable. To recover, re-run this skill's Process from disk once the task source is readable.
 3. Read git state to see what is actually on disk versus committed:
    ```bash
    git branch --show-current
