@@ -27,8 +27,15 @@ The load-bearing middle of the build. This gets one phase onto its own branch wi
    git switch main && git pull
    git switch -c feature/phase-<N>-<short-slug>
    ```
-4. **Pre-flight consistency check.** Before any code, verify and report:
-   - Prerequisite phases are complete (per the plan and `bd status`).
+4. **Scaffold this phase's gate** at `docs/checkpoints/phase-<N>.json` so `/checkpoint <N>` verifies only THIS phase, not future phases' still-unticked criteria. Scope the acceptance-criteria check to this phase's ACs with `match` (the AC prefix for the phase, e.g. `AC-002`):
+   ```json
+   { "checks": [
+     { "id": "tests", "label": "Tests pass", "kind": "mechanical", "type": "command", "cmd": "npm test --silent", "expectExit": 0 },
+     { "id": "acs", "label": "Phase <N> ACs ticked", "kind": "mechanical", "type": "checklist-done", "path": "docs/prd/acceptance-checklist.md", "match": "AC-00<N>" }
+   ] }
+   ```
+5. **Pre-flight consistency check.** Before any code, verify and report:
+   - Prerequisite phases are complete (per the plan and, if you use Beads, `bd status`).
    - Every library this phase uses. Check its **current** API with Context7 and flag anything deprecated or moved. Verify, do not recall.
    - First build phase only: if the ADRs specify a database, stand up the local dev DB, wire `.env` from `.env.example`, run initial migrations, and confirm the connection before building against it.
    - Present a phase brief: what is being built (user stories plus AC numbers), the ordered steps, the definition of done, and any drift you found between plan, ADRs and code.

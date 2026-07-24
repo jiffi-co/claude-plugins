@@ -98,9 +98,17 @@ function runCheck(c) {
           const end = rest.findIndex((l) => /^#{1,6}\s/.test(l))
           scope = (end === -1 ? rest : rest.slice(0, end)).join('\n')
         }
+        // `match` scopes the check to only the checklist lines matching a regex —
+        // e.g. match:"AC-001" gates just this phase's criteria, so an early phase
+        // does not fail on later phases' still-unticked ACs. Without it, ALL items
+        // must be ticked (correct for the final, whole-project checkpoint).
+        if (c.match) {
+          const re = new RegExp(c.match)
+          scope = scope.split('\n').filter((l) => re.test(l)).join('\n')
+        }
         const open = (scope.match(/^\s*[-*]\s+\[ \]/gm) || []).length
         const done = (scope.match(/^\s*[-*]\s+\[x\]/gim) || []).length
-        return { pass: open === 0 && done > 0, evidence: `${done} ticked, ${open} unticked` }
+        return { pass: open === 0 && done > 0, evidence: `${done} ticked, ${open} unticked${c.match ? ` (matching /${c.match}/)` : ''}` }
       }
       case 'advisory':
         return { pass: null, evidence: c.note || 'review manually' }

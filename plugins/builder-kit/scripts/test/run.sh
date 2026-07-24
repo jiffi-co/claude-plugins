@@ -60,6 +60,13 @@ rm -rf "$T"
 T2="$(mktemp -d)"; mkdir -p "$T2/docs/prd"; echo "# p" > "$T2/docs/prd/prd.md"; echo "cl" > "$T2/docs/prd/acceptance-checklist.md"
 assert_exit 1 "checkpoint fails a project missing the plan" bash -c "cd '$T2' && node '$ROOT/scripts/checkpoint.mjs' --manifest '$ROOT/scripts/checkpoint-manifest.json'"
 rm -rf "$T2"
+# phase-scoped AC check: match gates only this phase's ACs, ignoring later unticked ones
+T3="$(mktemp -d)"; printf -- "- [x] AC-001.1 done\n- [ ] AC-002.1 later phase\n" > "$T3/cl.md"
+printf '{"checks":[{"id":"a","type":"checklist-done","kind":"mechanical","path":"cl.md","match":"AC-001"}]}' > "$T3/m1.json"
+printf '{"checks":[{"id":"a","type":"checklist-done","kind":"mechanical","path":"cl.md","match":"AC-002"}]}' > "$T3/m2.json"
+assert_exit 0 "checkpoint match scopes to a passing phase (AC-001)" bash -c "cd '$T3' && node '$ROOT/scripts/checkpoint.mjs' --manifest m1.json"
+assert_exit 1 "checkpoint match fails an unticked phase (AC-002)" bash -c "cd '$T3' && node '$ROOT/scripts/checkpoint.mjs' --manifest m2.json"
+rm -rf "$T3"
 
 echo "== doctor behaviour =="
 assert_exit 0 "doctor --json runs and exits per core" bash -c "node '$ROOT/scripts/doctor.mjs' --json | node -e 'let s=\"\";process.stdin.on(\"data\",d=>s+=d);process.stdin.on(\"end\",()=>{JSON.parse(s)})'"
