@@ -1,6 +1,6 @@
 ---
 name: iterate
-description: Add a new feature to an already-live product by re-entering the build loop at the right point (mini brief, PRD delta, ADR only if a decision changes, plan the delta phases, build, ship) reusing the existing docs. Use when the product already ships and the user asks to add, extend, or change a feature, or says /iterate.
+description: Add a new feature to an already-live product by re-entering the build loop at the right point (mini brief, PRD delta, ADR only if a decision changes, plan the delta phases, build, ship) reusing the existing docs. Use when the product already ships and the user asks to add, extend, or change a feature, or names the iterate skill.
 allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, AskUserQuestion]
 ---
 

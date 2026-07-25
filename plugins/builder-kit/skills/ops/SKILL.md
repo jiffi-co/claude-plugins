@@ -1,6 +1,6 @@
 ---
 name: ops
-description: Use when the user has a live or in-progress product and asks about day-to-day running — context/cost house rules, monitoring, keeping the toolchain current, or says /ops. A reference to return to throughout every project, not a one-shot task.
+description: Use when the user has a live or in-progress product and asks about day-to-day running (context/cost house rules, monitoring, keeping the toolchain current), or names the ops skill. A reference to return to throughout every project, not a one-shot task.
 allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, AskUserQuestion]
 ---
 

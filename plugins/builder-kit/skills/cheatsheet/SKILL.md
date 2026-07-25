@@ -1,6 +1,6 @@
 ---
 name: cheatsheet
-description: Use when the user is new to the builder-kit, asks "what do I run next", "where am I up to", "what's the whole workflow", or says /cheatsheet — prints the one-screen map of skills, artifacts and gates in order.
+description: Use when the user is new to the builder-kit, asks "what do I run next", "where am I up to", or "what's the whole workflow". Prints the one-screen map of skills, artifacts and gates in order.
 allowed-tools: [Read, Glob]
 ---
 
@@ -24,32 +24,32 @@ Use when someone wants the big picture, has lost their place, or is deciding wha
    # Optional (recommended): task tracking with Beads
    bd setup claude
    ```
-3. Show the lifecycle map. Skills run in this order; each writes a real file. The `Type` column tells you what each one is: **cmd** = a slash command that ships with builder-kit, **skill** = a `/`-invoked skill, **agent** = a fresh-context reviewer you launch via the Task/subagent tool (not a slash command).
+3. Show the lifecycle map. Skills run in this order; each writes a real file. The `Type` column tells you what each one is: **cmd** = one of builder-kit's four real slash commands (you type it with a slash), **skill** = a skill you invoke by naming it in plain language (like "validate my idea"), never with a slash, **agent** = a fresh-context reviewer you launch via the Task/subagent tool.
 
    | # | Type | Name | One-line purpose | Artifact written |
    |---|------|------|------------------|------------------|
    | 1 | cmd | `/jiffi-doctor` | Preflight check the environment before you start | prints a readiness report |
    | 2 | cmd | `/jiffi-init` | Scaffold the repo and wire up builder-kit | project skeleton |
-   | 3 | skill | `/validate-idea` | Pressure-test the raw idea before any build (HUMAN gate) | notes in `docs/idea/` |
-   | 4 | skill | `/idea-pack` | Turn the validated idea into a structured Idea Pack | `docs/idea/idea-pack.md` |
-   | 5 | skill | `/prd` | Expand the pack into a PRD with testable acceptance criteria | `docs/prd/prd.md` |
-   | 6 | skill | `/architect` | Surface options, record the chosen architecture (HUMAN decides) | `docs/adr/*.md` |
-   | 7 | skill | `/design-system` | Lock tokens, type, colour, components (HUMAN taste) | `docs/design-system/MASTER.md` |
-   | 8 | skill | `/create-adr` | Record a single architecture decision as its own ADR | numbered `docs/adr/*.md` |
-   | 9 | skill | `/implementation-plan` | Break the PRD into independently testable phases | `docs/implementation-plan.md` |
-   | 10 | skill | `/page-specs` | Spec each page before building it | per-page specs under `docs/` |
-   | 11 | skill | `/phase-start` | Open the next phase, seed tasks, branch | tasks + git branch |
-   | — | — | *(build)* | Write the phase's code (the build loop) | source + tests |
-   | 12 | skill | `/verify-acs` | Check each acceptance criterion actually passes | `docs/checkpoints/*.md` |
-   | 13 | skill | `/ui-review` | Visual + UX pass on the running app in the browser | `docs/checkpoints/ui-review-[phase].md` |
-   | 14 | skill | `/phase-complete` | Close a phase only when tests are green | commit + closed tasks |
+   | 3 | skill | `validate-idea` | Pressure-test the raw idea before any build (HUMAN gate) | notes in `docs/idea/` |
+   | 4 | skill | `idea-pack` | Turn the validated idea into a structured Idea Pack | `docs/idea/idea-pack.md` |
+   | 5 | skill | `prd` | Expand the pack into a PRD with testable acceptance criteria | `docs/prd/prd.md` |
+   | 6 | skill | `architect` | Surface options, record the chosen architecture (HUMAN decides) | `docs/adr/*.md` |
+   | 7 | skill | `design-system` | Lock tokens, type, colour, components (HUMAN taste) | `docs/design-system/MASTER.md` |
+   | 8 | skill | `create-adr` | Record a single architecture decision as its own ADR | numbered `docs/adr/*.md` |
+   | 9 | skill | `implementation-plan` | Break the PRD into independently testable phases | `docs/implementation-plan.md` |
+   | 10 | skill | `page-specs` | Spec each page before building it | per-page specs under `docs/` |
+   | 11 | skill | `phase-start` | Open the next phase, seed tasks, branch | tasks + git branch |
+   | n/a | n/a | *(build)* | Write the phase's code (the build loop) | source + tests |
+   | 12 | skill | `verify-acs` | Check each acceptance criterion actually passes | `docs/checkpoints/*.md` |
+   | 13 | skill | `ui-review` | Visual + UX pass on the running app in the browser | `docs/checkpoints/ui-review-[phase].md` |
+   | 14 | skill | `phase-complete` | Close a phase only when tests are green | commit + closed tasks |
    | 15 | cmd | `/checkpoint` | Snapshot progress so a fresh session can resume | checkpoint entry |
-   | 16 | skill | `/ci-setup` | Wire up CI so tests gate every push | CI workflow config |
-   | 17 | skill | `/ship` | Code review, PR, deploy | PR + deployment |
-   | 18 | skill | `/ops` | Context, cost, security, error recovery (continuous) | ADR updates as needed |
-   | 19 | skill | `/iterate` | Feed a new change back to `/validate-idea` or `/prd` | new pack/PRD entry |
+   | 16 | skill | `ci-setup` | Wire up CI so tests gate every push | CI workflow config |
+   | 17 | skill | `ship` | Code review, PR, deploy | PR + deployment |
+   | 18 | skill | `ops` | Context, cost, security, error recovery (continuous) | ADR updates as needed |
+   | 19 | skill | `iterate` | Feed a new change back into the `validate-idea` or `prd` skill | new pack/PRD entry |
 
-   For orientation at any time (these do not advance the build): `/resume` reloads the session state from disk, and `/build-status` reports where you are up to.
+   For orientation at any time (these do not advance the build): name the `resume` skill to reload the session state from disk, and `build-status` to report where you are up to.
 
    Fresh-context reviewers run via the Task/subagent tool (not slash commands): `ac-verifier` (acceptance criteria), `review-idea-pack`, `review-build-plan`, `security-auditor`, and `seo-specialist`.
 
@@ -59,7 +59,7 @@ Use when someone wants the big picture, has lost their place, or is deciding wha
 
 - Do not skip stages. Each reads the artifact the previous one wrote; a missing artifact means run that skill first.
 - Four decisions stay HUMAN and a skill only prompts, never auto-answers: (1) idea validation, (2) the architecture decision, (3) design-system taste, (4) approval of the Idea Pack and PRD, plus human code review at ship.
-- Do not proceed to build (`/phase-start`) until an approved Idea Pack, PRD, acceptance checklist and initial ADRs all exist on disk.
+- Do not proceed to build (the `phase-start` skill) until an approved Idea Pack, PRD, acceptance checklist and initial ADRs all exist on disk.
 - Context is disk, not chat: if it matters it is in `docs/`, an ADR, or (if you use Beads) a task.
 - This skill never edits files. It only reads to orient.
 

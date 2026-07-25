@@ -1,6 +1,6 @@
 ---
 name: implementation-plan
-description: Turn the approved PRD and accepted ADRs into docs/implementation-plan.md — phases each carrying the ACs they deliver, an execution mode, a definition of done, and a required per-phase verification check Claude can run. Use when the PRD and ADRs are done and the user asks to plan the build, or says /implementation-plan.
+description: Turn the approved PRD and accepted ADRs into docs/implementation-plan.md, with phases each carrying the ACs they deliver, an execution mode, a definition of done, and a required per-phase verification check Claude can run. Use when the PRD and ADRs are done and the user asks to plan the build.
 allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, AskUserQuestion]
 ---
 
@@ -10,7 +10,7 @@ Produce the build blueprint an agent follows one phase at a time: `docs/implemen
 
 ## When to use / when not
 
-- Use after the PRD is approved and the ADRs are accepted, when the user asks to plan the build or says `/implementation-plan`.
+- Use after the PRD is approved and the ADRs are accepted, when the user asks to plan the build.
 - Do not use before the PRD or ADRs exist — run `prd` / `create-adr` first. Do not use to write code; this produces the plan only.
 
 ## Process

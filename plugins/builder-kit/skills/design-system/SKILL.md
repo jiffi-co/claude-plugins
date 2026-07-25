@@ -1,6 +1,6 @@
 ---
 name: design-system
-description: Interview the human for taste (mood, personality, brand), then write docs/design-system/MASTER.md plus a dual-mode token scaffold (light, dark, semantic, provider, toggle, FOUC). Use after the ADRs are accepted and the user asks to create the design system, or says /design-system.
+description: Interview the human for taste (mood, personality, brand), then write docs/design-system/MASTER.md plus a dual-mode token scaffold (light, dark, semantic, provider, toggle, FOUC). Use after the ADRs are accepted and the user asks to create the design system, or names the design-system skill.
 allowed-tools: [Read, Write, Edit, Bash, Glob, AskUserQuestion, Skill]
 ---
 
@@ -24,17 +24,18 @@ Turn the approved specs into a single source of visual truth at `docs/design-sys
    - Typography feel (geometric, humanist, or monospace/technical) and density (spacious vs compact).
    - Reference products they admire, to calibrate direction (not to copy).
    Stop and wait for answers. Do not proceed on assumptions.
+   **Non-interactive runs.** When `AskUserQuestion` cannot reach a human (a background or automated run, a subagent with no interactive channel), do not hang on the interview and do not silently pretend a taste call was made. Generate from the safest defaults the inputs justify, emit every value as a `CANDIDATE` (step 7), and record each assumption in the Overview so the human can confirm or override before Part 6. Interactive is the default; this is the fallback.
 5. Generate the system from the interview answers. This skill produces a complete, solid design system on its own, no external tooling required. Optionally, if you have the UI/UX Pro Max toolkit installed (a separate install, not bundled with builder-kit), you can lean on it for the palette, font pairing, component styles and spacing scale, and use `impeccable:frontend-design` for creative direction on hero, landing and first-impression surfaces. These are enhancements, not prerequisites.
 6. Write `docs/design-system/MASTER.md` (shape below). It MUST include the full **Design Principles** section (Nielsen's 10 heuristics and the UX Laws) and the **Motion & Animation** section. Motion patterns are implemented with the `motion` package (install `motion`, not the legacy `framer-motion` alias); CSS-only for trivial hovers.
-7. Note the **dual-mode theme scaffold** in MASTER.md: light tokens, dark tokens, a semantic layer over both, a theme provider, a toggle, and an inline FOUC-prevention script that sets the theme before paint. Write every generated token value as an explicitly marked placeholder, e.g. `--color-primary: PLACEHOLDER; /* replace before Part 6 */`. These markers MUST be replaced with real values before the build phase (Part 6); a `/checkpoint` assertion fails while any survive.
-8. Report back: the file written, the taste decisions captured, and a one-line reminder that placeholders must be resolved before Part 6.
+7. Note the **dual-mode theme scaffold** in MASTER.md: light tokens, dark tokens, a semantic layer over both, a theme provider, a toggle, and an inline FOUC-prevention script that sets the theme before paint. Give every generated token a **concrete candidate value**, never the literal string `PLACEHOLDER`: a real hex derived from the interview answers (Option A) or the extracted brand (Option B), tagged for confirmation, e.g. `--color-primary: #4F46E5; /* CANDIDATE: confirm before Part 6 */`, whose white-on-primary pairing computes to 6.3:1 (AA pass). A bare `PLACEHOLDER` carries no hex, so the design system could not list its AA contrast pairings; a real candidate can, which is the point. An unconfirmed candidate is a value to confirm, not a blocker: nothing hard-fails on it, so the human confirms or swaps it in the design review before Part 6. A value the human explicitly gave (a confirmed brand colour, an exact colour named in the interview) is not a candidate and carries no tag.
+8. Report back: the file written, the taste decisions captured, and a one-line reminder that candidate values (anything tagged `CANDIDATE`) are the human's to confirm before Part 6, with the count still unconfirmed.
 
 ## Rules
 
 - Taste (mood, personality, brand, colour, type, density) is a human decision. Interview with `AskUserQuestion`; never pick it for them.
 - Existing branding is authoritative. Extract and confirm before extending; flag any conflict with the PRD's needs and recommend a resolution rather than silently overriding.
 - The token scaffold must match the styling ADR and use dual-mode (light, dark, semantic) by default.
-- Ships with placeholder token values by design; those placeholders are a gate, not the finished theme, and must be gone before Part 6.
+- Ships with concrete candidate token values by design, each tagged `CANDIDATE` for the human to confirm before Part 6. A candidate is a prompt to confirm, not a blocker, and never the literal string `PLACEHOLDER` (a bare marker has no hex to verify).
 - Do not proceed to page specs until MASTER.md exists and is complete.
 
 ## Output
@@ -42,9 +43,9 @@ Turn the approved specs into a single source of visual truth at `docs/design-sys
 `docs/design-system/MASTER.md`, containing at minimum:
 
 - **Overview and personality** (the taste answers, made concrete).
-- **Colour tokens** (light and dark) and the **semantic layer** mapping them to roles.
+- **Colour tokens** (light and dark) and the **semantic layer** mapping them to roles. For each text-on-surface and UI pairing, in both modes, list the **computed WCAG contrast ratio** and its AA verdict (body text >= 4.5:1; large text and UI components >= 3:1). Compute the ratio with the relative-luminance formula, do not eyeball it; a few lines of node run via Bash keep it deterministic. A candidate colour must pass AA before it ships as a candidate. If a confirmed brand pairing cannot reach AA, flag it and recommend an accessible adjustment rather than silently restyling the brand.
 - **Typography** (families, scale, weights, line heights) and **spacing/density** scale.
 - **Components** (buttons, inputs, cards, nav, etc.) with states.
 - **Design Principles** (Nielsen's 10 heuristics + UX Laws, applied to components, page specs, motion and interactions).
 - **Motion & Animation** (library, patterns with timing/easing, anti-patterns, `prefers-reduced-motion`, per-component motion props).
-- **Theme scaffold note** (light, dark, semantic, provider, toggle, FOUC script) with placeholder markers flagged for replacement before Part 6.
+- **Theme scaffold note** (light, dark, semantic, provider, toggle, FOUC script) with every generated token given a concrete `CANDIDATE`-tagged value (real hex, AA-verified), flagged for the human to confirm before Part 6.

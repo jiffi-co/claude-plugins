@@ -1,6 +1,6 @@
 ---
-description: Scaffold a Jiffi-workflow project — docs structure, CLAUDE.md, AGENTS.md, .claude config and the per-project gate — from shipped templates, with forge-new discipline (never overwrites, verifies, rolls back on failure).
-argument-hint: "[project name]"
+description: Scaffold a Jiffi-workflow project — docs structure, CLAUDE.md, AGENTS.md, .claude config and the per-project gate — from shipped templates, with forge-new discipline (never overwrites, verifies, rolls back on failure). Supports --type web|ios|agent.
+argument-hint: "[project name] [--type web|ios|agent]"
 allowed-tools: Bash(node:*)
 ---
 
@@ -12,6 +12,7 @@ node "${CLAUDE_PLUGIN_ROOT}/scripts/init.mjs" $1
 
 - With a **name** (`$1`), it creates `./$1` and refuses if that directory already exists and is non-empty (it will not clobber your work).
 - With **no name**, it scaffolds the current directory in place, skipping any file that already exists and reporting what it skipped.
+- With **`--type web|ios|agent`** (default `web`), it lays the shared workflow base and then the domain overlay for that target, and records the type in `.claude/builder-kit.json` so the tail skills (`ci-setup`, `ship`, `ui-review`, the reviewers) and `/jiffi-doctor` branch to the right toolchain. The spine (idea → PRD → ADRs → plan → build loop) is identical across all types.
 
 After it runs, report exactly what was created and skipped, then tell the user the next step it prints (`/validate-idea`, then `/idea-pack`). Do not hand-write the scaffolded files yourself — the script owns them so the plugin and the guides stay in sync.
 

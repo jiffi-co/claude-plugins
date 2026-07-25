@@ -30,7 +30,7 @@ The load-bearing middle of the build. This gets one phase onto its own branch wi
 4. **Scaffold this phase's gate** at `docs/checkpoints/phase-<N>.json` so `/checkpoint <N>` verifies only THIS phase, not future phases' still-unticked criteria. Scope the acceptance-criteria check to this phase's ACs with `match` (the AC prefix for the phase, e.g. `AC-002`):
    ```json
    { "checks": [
-     { "id": "tests", "label": "Tests pass", "kind": "mechanical", "type": "command", "cmd": "npm test --silent", "expectExit": 0 },
+     { "id": "tests", "label": "Tests pass", "kind": "mechanical", "type": "test-command", "expectExit": 0 },
      { "id": "acs", "label": "Phase <N> ACs ticked", "kind": "mechanical", "type": "checklist-done", "path": "docs/prd/acceptance-checklist.md", "match": "AC-00<N>" }
    ] }
    ```

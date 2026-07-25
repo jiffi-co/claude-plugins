@@ -1,6 +1,6 @@
 ---
 name: validate-idea
-description: Use when the user is starting a new build, has a raw idea, or says /validate-idea, before any Idea Pack or PRD work. Runs the Phase-0 six-question idea check, records the answers, and gates the move to idea-pack. Never answers the questions for the user.
+description: Use when the user is starting a new build, has a raw idea, or wants to validate an idea, before any Idea Pack or PRD work. Runs the Phase-0 six-question idea check, records the answers, and gates the move to idea-pack. Never answers the questions for the user.
 allowed-tools: [Read, Write, AskUserQuestion]
 ---
 
@@ -16,7 +16,10 @@ Runs the Phase-0 idea validation: six hard questions that push a raw idea from a
 
 ## Process
 
-1. **Check for prior work.** Read `docs/idea/validation.md` if it exists. If it is already complete and passes, tell the user and ask whether they want to revise or move on; do not silently redo it.
+1. **Check for prior work or a prepared brief, and decide whether you even need the interview.** Read `docs/idea/validation.md` if it exists.
+   - If the record already exists and passes, tell the user and ask whether they want to revise or move on; do not silently redo it.
+   - If the user has already supplied a complete brief up front (all six answers below, in their own words), take those as the answers and skip the six-question `AskUserQuestion` interview loop; do not re-ask what the human has already told you. Write the record and mark it `_Answers: supplied by the user, not interviewed_`, so the human-judgement step stays visible and is never silently assumed.
+   - This is never a licence to invent substance: any of the six the user did not supply is still asked, one at a time, and never filled in for them.
 2. **Explain the rule up front, in one line:** you are the interviewer, not the answerer. You will not fill in an idea they have not formed. A vague answer gets one honest push-back, then it gets recorded as-is.
 3. **Ask the six questions** with `AskUserQuestion`, one at a time so each answer can sharpen the next. Do NOT pre-fill answers. Ask in plain words, capture their exact reply:
    - **The exact problem.** Which specific workflow breaks down, at the exact moment it goes wrong? Not a general frustration. One sentence.
@@ -28,25 +31,26 @@ Runs the Phase-0 idea validation: six hard questions that push a raw idea from a
 4. **Push back once where an answer is vague, then stop.** If "who" is "everyone" or "solved" is "it just works", reflect that back and ask them to get concrete. You may sharpen wording, never invent substance. One push per question; record whatever they land on.
 5. **Write `docs/idea/validation.md`** with all six answers verbatim (see Output), then read the four gate conditions back to them.
 6. **Judge readiness and say it plainly.** Score the four gates below. Present the verdict with `AskUserQuestion` and let the user decide whether to proceed; do not auto-advance.
-   - **All four met:** confirm, then point them to `/idea-pack`.
+   - **All four met:** confirm, then point them to the idea-pack skill.
    - **Any missing:** say which, say that is their homework now, and refuse to hand off to idea-pack until they are met. Offer the Jiffi call for ideas that need a conversation.
 7. **Say the thing this skill cannot do:** it checks that the idea is *defined*, not that it is *good*. A crisp one-liner for a product nobody wants still passes the format and still fails in the market. If the idea itself feels shaky, that is a signal to book the 30-minute Jiffi call before building, not to push on.
 
 ## Rules
 
 - Never answer the six questions for the user, and never write substance they did not say. Sharpening their words is allowed; supplying the idea is not.
-- Proceeding to `/idea-pack` is a human gate. Do not hand off until all four conditions are met AND the user has explicitly chosen to continue.
+- Proceeding to the idea-pack skill is a human gate. Do not hand off until all four conditions are met AND the user has explicitly chosen to continue.
 - The four gate conditions, all required: a one-liner in the required format; the exact workflow the app replaces or improves; a specific daily user; a clear picture of success.
 - `docs/idea/validation.md` is the source of truth, not this chat. It must exist before any later phase skill runs.
 - State the limit honestly: this cannot protect the user from a bad idea, only from an undefined one.
 
 ## Output
 
-`docs/idea/validation.md`:
+`docs/idea/validation.md`. Tick (`- [x]`) each of the four gates that is met and leave any unmet gate unticked (`- [ ]`); the ticks must agree with the `Status` line, so on `Status: PASS` all four boxes are ticked. When the interview was skipped, keep the `_Answers:_` line so the human-judgement step is on the record.
 
 ```markdown
 # Idea Validation (Phase 0)
 _Date: <YYYY-MM-DD>_
+_Answers: interviewed | supplied by the user, not interviewed_
 
 ## The exact problem
 <verbatim answer>
@@ -67,10 +71,10 @@ _Date: <YYYY-MM-DD>_
 > I am building <X> for <specific person> so that <specific outcome>.
 
 ## Gate check
-- [ ] One-liner passes the format
-- [ ] Exact workflow named
-- [ ] Specific daily user named
-- [ ] Clear picture of success
+- [x] One-liner passes the format
+- [x] Exact workflow named
+- [x] Specific daily user named
+- [x] Clear picture of success
 
 Status: PASS | NEEDS WORK — <which conditions are unmet>
 ```

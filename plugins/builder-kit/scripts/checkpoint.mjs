@@ -17,6 +17,7 @@
 //               phases?: number[], optional?: boolean }
 // Types:
 //   command          { cmd, expectExit?=0 }          run in a shell, compare exit code
+//   test-command     { expectExit?=0 }                run the project's test command from .claude/builder-kit.json (fallback npm test), compare exit code
 //   file-exists      { path }                          the file exists and is non-empty
 //   grep-min         { path, pattern, min?=1, flags?="" }  >= min regex matches in the file
 //   heading          { path, text }                    a markdown heading line contains text
@@ -58,6 +59,25 @@ function readFileSafe(p) {
   }
 }
 
+// Resolve the project's test command from .claude/builder-kit.json (relative to
+// cwd, like every manifest path). jiffi-init writes a per-type testCommand there
+// (web: npm test, ios: xcodebuild test, agent: npm run eval), so a green "tests
+// pass" check means the REAL per-type suite ran, not a hardcoded npm test. A
+// missing/invalid config, or an unset testCommand, falls back to npm test, the
+// same fallback the Stop hook (stop-test-gate.mjs) and doctor use.
+function resolveTestCommand() {
+  const body = readFileSafe('.claude/builder-kit.json')
+  if (body == null) return { cmd: 'npm test', source: 'fallback (no .claude/builder-kit.json)' }
+  try {
+    const cfg = JSON.parse(body)
+    const tc = cfg && cfg.testCommand
+    if (typeof tc === 'string' && tc.trim()) return { cmd: tc, source: '.claude/builder-kit.json' }
+    return { cmd: 'npm test', source: 'fallback (no testCommand in .claude/builder-kit.json)' }
+  } catch {
+    return { cmd: 'npm test', source: 'fallback (.claude/builder-kit.json is not valid JSON)' }
+  }
+}
+
 function runCheck(c) {
   try {
     switch (c.type) {
@@ -67,6 +87,16 @@ function runCheck(c) {
         const want = c.expectExit ?? 0
         const evidence = `exit ${code} (expected ${want})${r.error ? ` — ${r.error.message}` : ''}`
         return { pass: code === want, evidence }
+      }
+      case 'test-command': {
+        // Resolve the per-type test command from config, then run it with the
+        // exact same exit-code semantics as `command` (delegate, don't duplicate).
+        // A suite that cannot run (e.g. exit 127) FAILS the gate. Unlike the Stop
+        // hook it never fails open, because a green checkpoint must mean the real
+        // suite passed. The evidence names what ran so the gate is auditable.
+        const { cmd, source } = resolveTestCommand()
+        const res = runCheck({ ...c, type: 'command', cmd })
+        return { pass: res.pass, evidence: `\`${cmd}\` [${source}] — ${res.evidence}` }
       }
       case 'file-exists': {
         const ok = existsSync(c.path) && statSync(c.path).size > 0

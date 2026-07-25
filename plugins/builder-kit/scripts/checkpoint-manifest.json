@@ -4,7 +4,7 @@
     { "id": "prd", "label": "PRD exists", "kind": "mechanical", "type": "file-exists", "path": "docs/prd/prd.md" },
     { "id": "checklist", "label": "Acceptance checklist exists", "kind": "mechanical", "type": "file-exists", "path": "docs/prd/acceptance-checklist.md" },
     { "id": "plan", "label": "Implementation plan exists", "kind": "mechanical", "type": "file-exists", "path": "docs/implementation-plan.md" },
-    { "id": "tests", "label": "Test suite passes", "kind": "mechanical", "type": "command", "cmd": "npm test --silent", "expectExit": 0, "optional": true },
+    { "id": "tests", "label": "Test suite passes", "kind": "mechanical", "type": "test-command", "expectExit": 0, "optional": true },
     { "id": "typecheck", "label": "Typecheck passes", "kind": "mechanical", "type": "command", "cmd": "npx --no-install tsc --noEmit", "expectExit": 0, "optional": true },
     { "id": "acs-ticked", "label": "All acceptance criteria ticked", "kind": "mechanical", "type": "checklist-done", "path": "docs/prd/acceptance-checklist.md", "optional": true },
     { "id": "adr-index", "label": "ADR index present", "kind": "mechanical", "type": "file-exists", "path": "docs/adr/README.md", "optional": true },
