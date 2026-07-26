@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(.env)",
+      "Read(.env.*)",
+      "Bash(cat:*.env*)",
+      "Bash(cat:.env*)",
+      "Bash(grep:* .env*)",
+      "Bash(less:*.env*)",
+      "Bash(head:*.env*)",
+      "Bash(tail:*.env*)"
+    ]
+  },
+  "extraKnownMarketplaces": {
+    "jiffi-claude-plugins": {
+      "source": { "source": "github", "repo": "jiffi-co/claude-plugins" }
+    }
+  },
+  "enabledPlugins": ["builder-kit@jiffi-claude-plugins"]
+}

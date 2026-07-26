@@ -1,0 +1,32 @@
+name: release
+on:
+  push:
+    tags:
+      - 'v*'
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate before publishing
+        run: bash plugins/builder-kit/scripts/test/run.sh
+      - name: Package the plugin
+        run: |
+          cd plugins
+          zip -r "../builder-kit-${GITHUB_REF_NAME}.zip" builder-kit \
+            -x '*/scripts/test/*' -x '*/.DS_Store'
+          cd ..
+          sha256sum "builder-kit-${GITHUB_REF_NAME}.zip" > "builder-kit-${GITHUB_REF_NAME}.zip.sha256"
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            builder-kit-${{ github.ref_name }}.zip
+            builder-kit-${{ github.ref_name }}.zip.sha256
+          prerelease: ${{ contains(github.ref_name, '-beta') }}
+          generate_release_notes: true

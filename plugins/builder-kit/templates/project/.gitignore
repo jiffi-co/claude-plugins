@@ -1,0 +1,14 @@
+node_modules/
+.env
+.env.*
+!.env.example
+
+# Framework build/output (keep the ones your stack uses, drop the rest)
+dist/
+build/
+.next/
+.nuxt/
+.output/
+.svelte-kit/
+
+.DS_Store

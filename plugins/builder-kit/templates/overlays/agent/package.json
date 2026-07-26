@@ -1,0 +1,15 @@
+{
+  "name": "{{PROJECT_NAME}}",
+  "version": "0.1.0",
+  "private": true,
+  "description": "An OpenClaw-style AI agent, scaffolded by builder-kit.",
+  "type": "module",
+  "engines": {
+    "node": ">=23.6.0"
+  },
+  "scripts": {
+    "start": "node src/agent.ts",
+    "test": "node evals/run.mjs",
+    "eval": "node evals/run.mjs"
+  }
+}
