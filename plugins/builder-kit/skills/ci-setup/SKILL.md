@@ -51,9 +51,9 @@ No remote listed means the repo has never been pushed, so there is nothing on Gi
    - `.github/workflows/claude-review.yml` — `anthropics/claude-code-action@v1`, triggers `pull_request: [opened, synchronize]`, uses `prompt` + `claude_args` (never the old `mode`/`direct_prompt`/`allowed_tools` inputs). This reviews the diff and is language-agnostic, so it is the same file for web, iOS and agent repos.
 
    **web (`projectType` "web", or absent): test + lint**
-   - `.github/workflows/test.yml` — triggers on `pull_request` and push to `main`; installs deps, runs `npx vitest run --coverage`, fails under 80%.
+   - `.github/workflows/test.yml`, which triggers on `pull_request` and push to `main`, installs deps, then runs the test command recorded in `.claude/builder-kit.json` (`testCommand`, `npm test` by default). The builder may have set vitest, jest, node --test or another runner, so run the recorded command, not `vitest` by name. If that command is configured to emit coverage (for example `vitest run --coverage`), keep the fail-under-80% gate; do not bolt a coverage threshold onto a runner that reports none.
    - `.github/workflows/lint.yml` — triggers on `pull_request`; runs the stack's linter; fails on errors.
-   - Preview deploys stay Vercel-native (Vercel builds a preview per PR), so the skill writes no deploy workflow. That is the ship skill's territory.
+   - Whether CI needs a deploy job depends on the hosting ADR (`docs/adr/`), so read it before deciding. Some hosts (Vercel, Netlify) build a preview per PR natively, so CI writes no deploy workflow. Others (Fly, a VPS) have no native preview, so they need either a deploy job in CI or a documented manual deploy. Either way the production deploy itself is the ship skill's territory, not this one's.
 
    **ios (`projectType` "ios"): build + test on a macOS runner**
    - `.github/workflows/ios-ci.yml`: runs on `macos-14`, triggered by `pull_request` and push to `main`. Steps: checkout; pin the Xcode version (`maxim-lobanov/setup-xcode`); if the scaffold uses XcodeGen, run `xcodegen generate`; resolve Swift packages (`xcodebuild -resolvePackageDependencies`); run `xcodebuild test` against a simulator the runner image provides (for example `-destination 'platform=iOS Simulator,name=iPhone 15'`), then `xcodebuild build`. Name the job `ios-build-test`.
@@ -111,7 +111,7 @@ No remote listed means the repo has never been pushed, so there is nothing on Gi
 - Hardening is mandatory, not optional. A prompt-injection payload was shown to steer this Action into leaking `ANTHROPIC_API_KEY`; Anthropic shipped the fix in Claude Code 2.1.128. Least-privilege `--allowedTools`, `contents: read` / `pull-requests: write`, SHA-pinned actions and a 30-minute timeout are what stop a compromised run becoming a compromised secret.
 - Never write the API key into a file, workflow or `.env`. It lives only in GitHub Actions secrets. Never commit secrets.
 - The skill prompts for the secret, branch protection and secret-scanning toggles; it does not silently perform account/org changes it cannot verify. Confirm each ran.
-- Read `projectType` from `.claude/builder-kit.json` first (default web) and write only that type's test/build workflow. Do not put web's `vitest` coverage gate into an iOS or agent repo, and do not put `xcodebuild` into a web repo. The PR review workflow and the hardening are the only parts shared across all types.
+- Read `projectType` from `.claude/builder-kit.json` first (default web) and write only that type's test/build workflow. Do not put web's recorded test command into an iOS or agent repo, and do not put `xcodebuild` into a web repo. The PR review workflow and the hardening are the only parts shared across all types.
 - Claim only tooling the repo actually has. Gate the optional iOS TestFlight lane on a real `Fastfile`, gate the agent artifact build on a real `Dockerfile` or packaging script, and gate the agent eval step on a real eval script. Where one is missing, skip that piece and report the gap; do not scaffold a fake lane, image or eval.
 
 ## Output

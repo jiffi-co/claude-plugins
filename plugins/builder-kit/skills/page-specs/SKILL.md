@@ -39,7 +39,7 @@ Each `docs/design-system/pages/<page-name>.md` contains:
 6. **Data sources** — API endpoints/data consumed, referencing the PRD API contracts.
 7. **User interactions** — each action mapped to its outcome (e.g. "Click Save → POST /api/projects → success toast or inline error").
 8. **Responsive behaviour** — what stacks, collapses, or hides at each breakpoint.
-9. **Animation & Motion** — entrance stagger order, hover/focus/active states, scroll-triggered reveals, and state transitions, referencing the patterns in MASTER.md. Give concrete Motion props (`initial`, `animate`, `transition`, `whileHover`, `whileInView`) so the build has instructions, not adjectives. Animations are implemented with the `motion` package (install `motion`, not the legacy `framer-motion` alias) and must respect `prefers-reduced-motion`.
+9. **Animation & Motion**: entrance stagger order, hover/focus/active states, scroll-triggered reveals, and state transitions, referencing the patterns in MASTER.md. Give concrete motion instructions in the project's frontend framework idiom (read the framework from MASTER.md's Motion & Animation section, or the framework ADR), so the build has instructions not adjectives: React/Next with the `motion` package (`motion/react`, not the legacy `framer-motion` alias) uses `initial`/`animate`/`transition`/`whileHover`/`whileInView`; Vue/Nuxt uses `<Transition>`/`<TransitionGroup>` with `@vueuse/motion`'s `v-motion` (`:initial`/`:enter`/`:visible`) or motion-v; SvelteKit uses its built-in `transition:`/`animate:` directives. Whichever the project uses, every animation must respect `prefers-reduced-motion`.
 10. **Phase** — which implementation phase delivers this page.
 
 ## Rules

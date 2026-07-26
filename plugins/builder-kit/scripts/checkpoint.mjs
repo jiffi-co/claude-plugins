@@ -103,6 +103,13 @@ function runCheck(c) {
         return { pass: ok, evidence: ok ? `present (${statSync(c.path).size} bytes)` : 'missing or empty' }
       }
       case 'grep-min': {
+        // A scaffolded manifest can point a grep check at a directory. readFileSync
+        // throws EISDIR on a directory, which readFileSafe would swallow into a
+        // misleading "file not found". Name the real problem instead, and fail the
+        // check (a grep-min against a directory is a misconfigured manifest).
+        if (existsSync(c.path) && statSync(c.path).isDirectory()) {
+          return { pass: false, evidence: `path is a directory, not a file: ${c.path}` }
+        }
         const body = readFileSafe(c.path)
         if (body == null) return { pass: false, evidence: `file not found: ${c.path}` }
         const re = new RegExp(c.pattern, 'g' + (c.flags || ''))

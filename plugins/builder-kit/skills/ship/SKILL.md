@@ -1,6 +1,6 @@
 ---
 name: ship
-description: Take a green, committed phase to live. Runs the bundled /code-review and /security-review, opens the PR via gh, holds for HUMAN sign-off, merges, then deploys per project type and the hosting ADR (Vercel for web, TestFlight for iOS, the agent host for agent) and smoke-checks the release. Use when a phase is verified and pushed and the user asks to ship, open a PR, deploy, or names the ship skill.
+description: Take a green, committed phase to live. Runs the bundled /code-review and /security-review, opens the PR via gh, holds for HUMAN sign-off, merges, then deploys per project type to the hosting ADR's target (Vercel is one web option, TestFlight for iOS, the agent host for agent), applies the production database migration as part of the web deploy, and smoke-checks the release. Use when a phase is verified and pushed and the user asks to ship, open a PR, deploy, or names the ship skill.
 allowed-tools: [Read, Edit, Bash, Grep, Glob, Task, AskUserQuestion]
 ---
 
@@ -23,7 +23,7 @@ This pipeline runs the same way for web, iOS and agent projects through step 6. 
    - **Upstream resolves** (prints e.g. `origin/feature/foo`): `git log @{u}..HEAD --oneline` must be empty. If it lists commits, the push is unfinished, so route back to `phase-complete` to push. Do not open a PR on a partly-pushed branch.
    - **Upstream fails** (`fatal: no upstream configured for branch`): the branch has never been pushed. Do NOT fall back to `git log origin/<branch>..<branch>`; with no remote branch that command fatals, which is exactly the crash to avoid. Ask the builder (AskUserQuestion) which case applies:
      - **Deploying now (the normal path):** set the remote and tracking with `git push -u origin "$(git branch --show-current)"`, then re-run the check and continue.
-     - **Staying local for now (not deploying yet):** `ship`'s PR, merge and deploy pipeline needs a remote, so do not force a push. Run the documented LOCAL-ONLY validation and stop there: the production build passes, any database migration applies cleanly to a fresh DB (where the project has migrations), and the rollback is rehearsed (the down-migration or revert has been run and confirmed to restore the prior state). Report those three as the local gate; opening the PR and deploying resume from here once you run `git push -u origin <branch>`.
+     - **Staying local for now (not deploying yet):** `ship`'s PR, merge and deploy pipeline needs a remote, so do not force a push. Run the documented LOCAL-ONLY validation and stop there: the production build passes, any database migration applies cleanly to a fresh DB (where the project has migrations), and the rollback is rehearsed (revert the code and confirm the prior release still runs against the current schema, the forward-compatible-migration discipline this guide teaches, plus a down-migration where your tool produces one, confirmed to restore the prior state). Report those three as the local gate; opening the PR and deploying resume from here once you run `git push -u origin <branch>`.
 
 2. **Run the bundled reviews.** Both ship with Claude Code — no plugin to install:
    ```
@@ -51,7 +51,11 @@ This pipeline runs the same way for web, iOS and agent projects through step 6. 
    git checkout main && git pull
    ```
 
-7. **Deploy per the hosting ADR.** (This step and step 8 are the **web** path; on an iOS or agent project follow the matching branch in 'By project type' below instead.) Read the hosting/deployment ADR in `docs/adr/` — the platform is the human's earlier architecture decision, not yours to pick. For Vercel, deploy with `npx vercel --prod` (or the platform's command). Vercel today: Fluid Compute with Active CPU pricing is the default, and new projects run Node 24 with server code on the Node runtime (avoid `runtime = 'edge'`, which opts into the more limited Edge runtime). Production secrets live in the platform's env UI (or a secrets manager), never in a committed `.env`. If no deployment guide exists, write one at `docs/deployment.md` (env setup, build, deploy, verify, rollback) and prompt for an ADR on the secrets approach.
+7. **Deploy per the hosting ADR, migration included.** (This step and step 8 are the **web** path; on an iOS or agent project follow the matching branch in 'By project type' below instead.) Read the hosting/deployment ADR in `docs/adr/` for the target (it is the human's earlier architecture decision, not yours to pick), and read the project's migration tool from its ADR, `.claude/builder-kit.json` or `package.json` (for example Drizzle `drizzle-kit migrate`, Prisma `prisma migrate deploy`, Payload `payload migrate`). Two parts, neither optional:
+   - **Migrate production first.** Where the project has migrations, apply the pending ones to the production database as part of the release, before the new code serves traffic (or as the platform's release-phase command), so the schema and the code land together. A deploy that skips this looks green and then 500s on the first request. Where the project has no migrations, say so and move on.
+   - **Deploy with the target's own command.** Vercel: `npx vercel --prod`. Fly.io: `fly deploy` (put the migration in a `release_command`, or run it with `fly ... run`); Railway and Render deploy the same way, with the migration in their release or pre-deploy command. A VPS or other self-managed host running a Node server build (Nuxt/Nitro node-server, SvelteKit adapter-node, or a plain Node output): the documented build-and-restart sequence in `docs/deployment.md`. Run whatever the ADR names; do not substitute a platform the project did not choose.
+
+   If the ADR names Vercel: Fluid Compute with Active CPU pricing is the default, and new projects run Node 24 with server code on the Node runtime (avoid `runtime = 'edge'`, which opts into the more limited Edge runtime). Production secrets live in the platform's env UI (or a secrets manager), never in a committed `.env`. If no deployment guide exists, write one at `docs/deployment.md` (env setup, migration, build, deploy, verify, rollback) and prompt for an ADR on the secrets approach.
 
 8. **Post-deploy smoke check.** Point Claude in Chrome (GA in Claude Code) at the deployed URL, walk the release's acceptance criteria end-to-end, and read the console for errors. The Playwright MCP from the test phase works too if you want a scriptable path. Report each AC verified on production, plus any console error, as evidence — not "looks live".
 
@@ -63,7 +67,7 @@ Read `.claude/builder-kit.json` and treat `projectType` as `web` if the file is 
 
 ### web (default)
 
-Steps 7 and 8 exactly as written above. Deploy to the ADR's platform (Vercel: `npx vercel --prod`), then smoke-check the live URL with Claude in Chrome or the Playwright MCP, walking the ACs and reading the console.
+Steps 7 and 8 exactly as written above: apply the project's pending migrations to the production database, deploy to the ADR's target with that target's own command (Vercel `npx vercel --prod`, Fly/Railway/Render their deploy command, a self-managed Node-server host its documented sequence), then smoke-check the live URL with Claude in Chrome or the Playwright MCP, walking the ACs and reading the console.
 
 ### ios
 
@@ -92,7 +96,7 @@ Post-deploy check (in place of step 8): once the build finishes processing, inst
 Steps 1 to 6 run unchanged. Skip `seo-specialist` and point `security-auditor` at the agent surface (prompt injection, secret handling, tool scope); step 2's `agent-eval` gate then runs right after `security-auditor` and must return PASS before you proceed, since a clean injection or jailbreak bypass there blocks the ship. Then, from `main`, in place of steps 7 and 8:
 
 1. Build the deployable artifact for the runtime `/jiffi-doctor` detected: a container image (`docker build -t <image>:<tag> .`, pushed to the registry the host reads) or a package or bundle (a built server bundle, an `npm pack` tarball, or a Python wheel or zip).
-2. Deploy that artifact to the agent host named in the ADR. The host is the human's architecture decision (for example the OpenClaw runtime, a container platform, or a service you run), so surface it and do not invent one. Push the exact version the build produced; do not hand-edit prod. Model keys and tool credentials live in the host's secret store, never in the artifact or a committed `.env`.
+2. Deploy that artifact to the agent host named in the ADR. The host is the human's architecture decision (for example the OpenClaw runtime, a container platform, or a service you run), so surface it and do not invent one. If the agent has a backing store with migrations (read its migration tool the same way the web path does), apply the pending ones to production as part of this deploy so the schema matches the shipped artifact; where there is no store or no migration, say so and move on. Push the exact version the build produced; do not hand-edit prod. Model keys and tool credentials live in the host's secret store, never in the artifact or a committed `.env`.
 3. Smoke-run one eval after deploy. Run one representative case from the agent's eval harness (the same evals `ui-review` uses) against the deployed agent, not a local build. Confirm it passes, then read the transcript for tool-call errors, leaked secrets, or off-policy output.
 
 Post-deploy check (in place of step 8): the deployed agent passes at least one eval and its transcript is clean. Report the eval result and the transcript as evidence, because a deploy that merely started is not a verified release.
@@ -102,6 +106,7 @@ Post-deploy check (in place of step 8): the deployed agent passes at least one e
 - **Human sign-off before merge is non-negotiable.** Automated review never merges a PR. This skill prompts and waits; it does not decide.
 - **Do not open a PR on a dirty or unpushed branch**, and never merge with a red CI check or an unresolved review.
 - The deploy platform comes from the hosting ADR — surface it, do not choose it. If no ADR exists, stop and prompt for one.
+- **Apply the production migration as part of the deploy, not after it.** Read the project's migration tool and run its pending migrations against production so the schema matches the shipped code; a schema that lags the code 500s on the first request. Where the project has no migrations, say so rather than assuming.
 - **Never commit production secrets.** No credentials in `.env`, in env-var UIs that get committed, or anywhere in version control.
 - Post-deploy verification needs concrete evidence (a passing flow, a clean console). Absence of a check is an unknown, not a pass.
 - On-disk state (the ADR, the acceptance checklist, the PR, CI) is the source of truth, not chat.
@@ -110,16 +115,17 @@ Post-deploy check (in place of step 8): the deployed agent passes at least one e
 
 No new source files (edits/actions only). Produces:
 - A GitHub PR (via `gh`), merged with `--squash --delete-branch` after human approval; `main` pulled locally.
-- `docs/deployment.md` if it did not already exist (env, build, deploy, verify, rollback).
+- `docs/deployment.md` if it did not already exist (env, migration, build, deploy, verify, rollback).
 - A deployed release on the ADR's platform, plus a printed ship summary:
 
 ```
 SHIPPED
 PR:         #<n> — merged (squash), branch deleted
 Reviews:    /code-review clean, /security-review clean, human approved by <who>
+Migrated:   <tool>; <k> applied to prod | none pending | project has no migrations
 Deployed:   <platform> — <live URL>
 Verified:   <k/n> ACs checked live; console clean | <errors named>
 Notes:      <rollback pointer, deferred items, follow-ups>
 ```
 
-The `Deployed` and `Verified` lines follow the project type: **web** reports the live URL and a clean console; **ios** reports the TestFlight build (version and build number) and the ACs walked on a simulator or device, with App Store submission still pending as a manual gate; **agent** reports the host and deployed version, plus the eval that passed after deploy.
+The `Migrated`, `Deployed` and `Verified` lines follow the project type: **web** reports the migrations applied, the live URL and a clean console; **ios** has no production database, so it drops the `Migrated` line and reports the TestFlight build (version and build number) and the ACs walked on a simulator or device, with App Store submission still pending as a manual gate; **agent** reports the host and deployed version (and any backing-store migration it applied), plus the eval that passed after deploy.
