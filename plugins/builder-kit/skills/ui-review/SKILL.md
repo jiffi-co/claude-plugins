@@ -41,7 +41,7 @@ Every score below is a judgement, and vision-as-judge hallucinates both ways: it
 
 This is the vision-verified ship gate: the differentiator that catches "green build, broke in the browser". It sits on top of, and above, the CLI gates (typecheck, lint, unit, build). Those prove the machine did not explode. This proves the journey actually works when a real user drives it. A build that compiles clean and renders a broken page still fails here.
 
-1. **Boot the app.** Ensure the dev server is up (`npm run dev`, or the project's own command); if not, start it in the background and wait for the local URL to answer before you drive anything.
+1. **Boot the app.** Ensure the dev server is up (`npm run dev`, or the project's own command); if not, start it in the background and wait for the local URL to answer before you drive anything. The vision gate drives the real app, so it has to actually serve. That means the local-dev database has to back `dev`, not only the test runner: if a database is wired for the test config (a throwaway PGlite or pg-mem for the suite) but `dev` has none, every database-touching route 500s the moment you drive it and the gate cannot boot the journey to score it. Back `dev` with a real local database (an in-process PGlite or pg-mem, or a throwaway container) before driving anything.
 2. **Drive the real journeys, do not read the code.** From `docs/implementation-plan.md` and the page specs, list the critical user journeys this phase touched (for example sign-up then verify then land on the dashboard, not just "the dashboard page"). Drive each one end to end in a real browser with the Playwright MCP (or the Chrome MCP if that is what is wired up), clicking through the actual steps. Every meaningful stop on a journey is a waypoint. A journey you assert from reading the source does not count, only a driven one does.
 3. **Capture every waypoint, three viewports, both themes.** At each waypoint, screenshot at all three fixed viewports and in both themes (toggle via the app's control or `data-theme` on the root):
    - desktop 1440x900
@@ -69,7 +69,14 @@ This is the vision-verified ship gate: the differentiator that catches "green bu
    Any sub-threshold pair is CRITICAL and blocks the gate until fixed. Confirm too that `prefers-reduced-motion` is honoured (every animation reads it and collapses to a near-instant transition).
 7. **Copy-voice string check.** Grep the built UI for the strings banned by `.claude/rules/copy-voice.md` and flag every hit:
    ```bash
-   grep -rniE "oops|something went wrong|are you sure\?|>[[:space:]]*loading\.\.\.[[:space:]]*<" src || true
+   # Grep the SERVED output, not the source tree: a comment or commented-out line
+   # ("// TODO: drop the 'Something went wrong' placeholder") is a false positive that never ships.
+   # The browser pass already loaded each waypoint, so dump the rendered HTML it holds
+   # (browser_evaluate returning document.documentElement.outerHTML) to a file per waypoint and grep that:
+   grep -niE "oops|something went wrong|are you sure\?|>[[:space:]]*loading\.\.\.[[:space:]]*<" <rendered-waypoint>.html || true
+   # Fallback, if you can only reach the source tree: exclude whole-line comments so they do not false-positive.
+   grep -rniE "oops|something went wrong|are you sure\?|>[[:space:]]*loading\.\.\.[[:space:]]*<" src \
+     | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(//|/\*|\*|<!--|\{/\*|#)' || true
    ```
    A bare "Loading...", an "Oops", a "Something went wrong", or an "Are you sure?" is a copy failure. The string must name what is loading, or what happened and what to do, or what the destructive action will actually do ("Delete 3 posts?"). Rewrite per the copy contract, do not wave it through.
 8. **Emotional target check.** For each page on a journey, state its spec's emotional target in one line, then judge: does the built page actually land it? Flag pages that read flat or generic.

@@ -29,11 +29,12 @@ Read `experienceLevel` and `assistanceMode` from `.claude/builder-kit.json` (def
    git switch main && git pull
    git switch -c feature/phase-<N>-<short-slug>
    ```
-4. **Scaffold this phase's gate** at `docs/checkpoints/phase-<N>.json` so `/checkpoint <N>` verifies only THIS phase, not future phases' still-unticked criteria. Scope the acceptance-criteria check to this phase's ACs with `match` (the AC prefix for the phase, e.g. `AC-002`):
+4. **Scaffold this phase's gate** at `docs/checkpoints/phase-<N>.json` so `/checkpoint <N>` verifies only THIS phase, not future phases' still-unticked criteria. ALWAYS scope the acceptance-criteria check to this phase's ACs with `match`; never scaffold an unscoped `checklist-done` for a non-final phase, or it fails demanding the WHOLE checklist ticked. A phase's ACs usually span several user-story numbers, so `match` is normally a multi-group regex (e.g. `AC-00[1-4]` for a phase that owns stories 1 to 4), not a single prefix. If this phase ships a browser bundle (web builds only), add a no-secret check scoped to the CLIENT bundle, the browser-served output (`.next/static` for Next, `dist/assets` for Vite), NOT the whole build directory, which false-positives on server-only node-trace files:
    ```json
    { "checks": [
      { "id": "tests", "label": "Tests pass", "kind": "mechanical", "type": "test-command", "expectExit": 0 },
-     { "id": "acs", "label": "Phase <N> ACs ticked", "kind": "mechanical", "type": "checklist-done", "path": "docs/prd/acceptance-checklist.md", "match": "AC-00<N>" }
+     { "id": "acs", "label": "Phase <N> ACs ticked", "kind": "mechanical", "type": "checklist-done", "path": "docs/prd/acceptance-checklist.md", "match": "AC-00[1-4]" },
+     { "id": "no-client-secret", "label": "No secret in the client bundle", "kind": "mechanical", "type": "command", "cmd": "! grep -RniE 'sk-[A-Za-z0-9]{16,}|AI_KEY' .next/static", "expectExit": 0 }
    ] }
    ```
 5. **Pre-flight consistency check.** Before any code, verify and report:
