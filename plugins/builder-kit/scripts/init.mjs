@@ -140,7 +140,18 @@ try {
       ios: `xcodebuild test -scheme ${projectName} -destination 'platform=iOS Simulator,name=iPhone 16'`,
       agent: 'npm run eval',
     }[projectType]
-    const cfg = { projectType, scaffoldedBy: 'jiffi-init', testCommand, stopTestGate: false }
+    // experienceLevel + assistanceMode drive the dual-track coaching model:
+    // interactive skills read these back to adapt tone and confirmation frequency
+    // WITHOUT forking content or skipping a human gate. Defaults are the gentlest
+    // (beginner/coach); an advanced builder flips them in .claude/builder-kit.json.
+    const cfg = {
+      projectType,
+      scaffoldedBy: 'jiffi-init',
+      testCommand,
+      stopTestGate: false,
+      experienceLevel: 'beginner',
+      assistanceMode: 'coach',
+    }
     writeFileSync(cfgPath, `${JSON.stringify(cfg, null, 2)}\n`)
     track(cfgPath)
     report.created.push('.claude/builder-kit.json')

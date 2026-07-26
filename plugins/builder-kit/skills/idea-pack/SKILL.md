@@ -8,6 +8,10 @@ allowed-tools: [Read, Write, AskUserQuestion, Skill]
 
 Produce a build-ready Idea Pack that front-loads the thinking. Interview first, then draft; the human approves each section before moving on. Write the result to `docs/idea/idea-pack.md`. The core ten sections are the same for every build; an iOS or agent project adds a short block of platform-specific sections, chosen by `projectType` in `.claude/builder-kit.json` (default `web`).
 
+**Experience level.** Read `experienceLevel` and `assistanceMode` from `.claude/builder-kit.json` (default beginner/coach). Adapt tone and confirmation frequency to the mode, never fork the content, and never skip a human gate.
+
+**Coaching authoring standard.** Every choice you put to the human, in an `AskUserQuestion` card or laid out in the document, carries three things: a context-first, plain-language headline that says what the choice decides in their own words (not the jargon term), a one-sentence why that names what turns on it, and a reversibility tag (an easy change later, or a one-way door).
+
 ## Process
 
 1. **Check the gate.** Read `docs/idea/validation.md`. If it is missing or does not pass, run the validate-idea skill first. The Idea Pack builds on the validated one-liner, it does not replace it.

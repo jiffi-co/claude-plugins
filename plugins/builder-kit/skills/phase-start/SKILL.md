@@ -8,6 +8,8 @@ allowed-tools: [Read, Edit, Bash, Grep, Glob, AskUserQuestion, Task]
 
 The load-bearing middle of the build. This gets one phase onto its own branch with fresh, verified context, then works it step by step until the phase's steps are done. Closing the phase out (full suite, AC sign-off, push, `bd close`) is the separate `phase-complete` skill.
 
+Read `experienceLevel` and `assistanceMode` from `.claude/builder-kit.json` (default beginner/coach); adapt tone and confirmation frequency, never fork the content, never skip a human gate.
+
 ## When to use / when not
 
 - **Use** at the start of any build phase, once ADRs are accepted and `docs/implementation-plan.md` exists.
@@ -44,13 +46,24 @@ The load-bearing middle of the build. This gets one phase onto its own branch wi
    git worktree add ../<project>-phase-<N> feature/phase-<N>-<slug>
    ```
 6. **Gate: wait for the human's go-ahead** on the brief and the mode before writing code.
-7. **Drive the loop, one step at a time.** For each ordered step:
+7. **Drive the loop, one step at a time.** If a step means exploring an unknown API, proving a risky approach, or feeling out a UI shape before committing, offer the **Spike lane** (see below) for that step instead of the full ceremony. For each ordered step:
    - State the step and the approach, then implement just that step.
    - Run the relevant tests after each meaningful change.
    - When they pass green, commit that increment (`git commit -m "phase <N>: <step>"`).
    - Move to the next step. Do not paste all steps at once.
 8. **When stuck** on one problem after **two failed correction attempts**, stop. Do not keep patching a full context. Tell the user to `/clear`, then restart the step with a sharper, more constrained prompt. If your Claude Code has a `/debug` skill, reach for it on a bug that needs tracing back through the call stack (otherwise trace it inline), `/rewind` to undo a bad turn (conversation and code), and `gh run view --log-failed` on a CI failure.
 9. When all the phase's steps are done and tests are green, hand off to **`phase-complete`** for the closeout.
+
+## Spike lane (labelled throwaway)
+
+Some steps are learning, not building: an unfamiliar library, a risky architecture bet, a UI shape you need to see before you trust it. Forcing the full test plus `/checkpoint` ceremony onto exploratory code just slows the learning and tempts you to keep bad code because it was expensive. The spike lane relaxes the ceremony on purpose, in exchange for the code not counting until a gate.
+
+- **Declare it out loud.** Cut the spike on a clearly throwaway branch, `spike/phase-<N>-<slug>`, never on `feature/phase-<N>-<slug>`. The name is the label: everyone can see this code is provisional.
+- **Relaxed ceremony while in the lane.** You may skip the per-step tests-green rule and the `/checkpoint <N>` gate. Commit freely with `spike:` message prefixes, or do not commit at all. Move fast, learn the thing.
+- **The code does not count.** Nothing produced in the lane is done. It ticks no AC, merges into no feature branch, and reaches `main` under no circumstances until it clears the gate.
+- **Promote-or-discard gate (the human's call, ask with AskUserQuestion):**
+  - **Discard** (the default posture): delete the spike branch and its code. Keep only what you learned, append one line to `docs/evolve/friction-log.md` or record a Decision so the knowledge survives the code. Nothing merges.
+  - **Promote:** the spike does not fold in as-is. Rebuild it to ceremony on `feature/phase-<N>-<slug>`, write the tests, satisfy the phase's ACs, and pass `/checkpoint <N>`. Only then does the work count. Treat the spike as a reference you reimplement cleanly, not a diff you cherry-pick.
 
 ## Rules
 
@@ -60,6 +73,7 @@ The load-bearing middle of the build. This gets one phase onto its own branch wi
 - The execution-mode choice and the go-ahead on the brief are the human's calls. Prompt, never auto-decide.
 - Load state from the on-disk plan and your tracker (if you use Beads: `bd status` / `bd ready`; otherwise native Tasks or `docs/tasks.md`), never from chat history.
 - Between phases, `/clear` is non-negotiable. Within a phase, after two dead-end corrections, `/clear` and rewrite.
+- A spike is throwaway by default. Labelled spike code never counts, never merges to a feature branch, and never ticks an AC until it passes the promote-or-discard gate and is rebuilt to ceremony (tests green, `/checkpoint <N>` passes).
 
 ## Output
 

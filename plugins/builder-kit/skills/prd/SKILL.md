@@ -10,6 +10,10 @@ Convert `docs/idea/idea-pack.md` into a specification an agent can build against
 
 The core of the document is the same for every build: an overview, user stories with numbered acceptance criteria, a data model, contracts, non-functional requirements, and a phased plan. What shifts is the emphasis, and `projectType` sets it. A web PRD carries SEO and UI/UX. An iOS PRD adds privacy and data collection, on-device persistence, and accessibility. An agent PRD adds a tool allowlist, eval scenarios, and a cost budget. Read the type first, write the shared core, then layer on that type's sections from 'By project type'.
 
+**Experience level.** Read `experienceLevel` and `assistanceMode` from `.claude/builder-kit.json` (default beginner/coach). Adapt tone and confirmation frequency to the mode, never fork the content, and never skip a human gate.
+
+**Coaching authoring standard.** Every choice you put to the human, in an `AskUserQuestion` card or laid out in the document, carries three things: a context-first, plain-language headline that says what the choice decides in their own words (not the jargon term), a one-sentence why that names what turns on it, and a reversibility tag (an easy change later, or a one-way door).
+
 ## Process
 
 1. **Read the inputs and the project type.** Read the approved Idea Pack (`docs/idea/idea-pack.md`); if it is missing, run the idea-pack step first. Then read `.claude/builder-kit.json` and take `projectType` (`web`, `ios`, or `agent`), defaulting to `web` if the file, the key, or a valid value is absent. The type decides which sections in 'By project type' you add on top of the shared core.

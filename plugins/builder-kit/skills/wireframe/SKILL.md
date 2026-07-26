@@ -1,0 +1,45 @@
+---
+name: wireframe
+description: Before any taste is spent, generate a low-fi wireframe per screen so the human approves the SHAPE. Grey boxes, real labels and real microcopy, no colour and no brand, a data-testid on every interactive element for later traceability. Use after page-specs and before design-system, when the user wants wireframes, or names the wireframe skill.
+allowed-tools: [Read, Write, Glob, AskUserQuestion]
+---
+
+# Wireframe
+
+Operating rules: re-read `${CLAUDE_PLUGIN_ROOT}/PRINCIPLES.md` before you start.
+
+Prove the layout before you spend any taste on it. This skill draws a low-fi wireframe per screen, grey boxes with the real words in them, so the human approves the structure and flow while it is still cheap to change. No colour, no brand, no fonts. Those come next, in the design-system skill, and they are wasted effort if the shape is wrong. Every interactive element carries a `data-testid`, which becomes the traceability contract that verify-acs and ui-review lean on later.
+
+Read `experienceLevel` and `assistanceMode` from `.claude/builder-kit.json` (default beginner/coach); adapt tone and confirmation frequency, never fork the content, never skip a human gate.
+
+## When to use / when not
+
+- Use after page specs exist and before the design-system skill runs, so the human signs off on the shape of each screen before any palette, type or brand decision is made.
+- Do not use before the PRD and page specs exist (there is nothing to wireframe yet), and do not add colour, brand or real fonts here; a wireframe that looks designed invites feedback on the paint instead of the structure, which is the opposite of the point.
+
+## Process
+
+1. Read the inputs so the wireframes match the agreed product: `docs/prd/prd.md` (screens, flows, key content), `docs/implementation-plan.md` (what ships in which phase), and the page specs (`docs/specs/` or wherever page-specs wrote them; use Glob to find them). If any screen has no spec, note it and wireframe from the PRD, flagging the assumption.
+2. **Advanced escape hatch.** If `experienceLevel` is `advanced`, offer to skip this stage with `AskUserQuestion`. Skipping is allowed only with a stated reason (for example the human is porting a known layout, or wireframes already exist). Record the reason at the top of `docs/wireframes/README.md` so the skipped stage is on the record, then hand to design-system. A beginner run does not offer the skip; the shape gate matters most for the least experienced builder.
+3. List the screens to draw. Derive the set from the page specs and the PRD's flows. Confirm the list with the human before drawing (one short `AskUserQuestion`) so a missing or extra screen is caught before you write files, not after.
+4. For each screen, write a self-contained low-fi HTML file to `docs/wireframes/<screen>.html` (shape below). One file per screen, named by the screen's route or spec id so a reviewer can map file to screen at a glance. Grey boxes only: greyscale fills, plain borders, system font, no imagery. Put the REAL labels and REAL microcopy in (the actual button text, the actual field labels, the actual empty-state and error copy from the specs), not lorem ipsum, because the words are part of the shape the human is approving.
+5. Put a `data-testid` on every interactive element (every button, link, input, select, tab, toggle, menu). Use a stable, human-readable id that names the element and its screen, for example `data-testid="signup-email-input"` or `data-testid="dashboard-new-build-button"`. This is a contract: keep the ids stable, list them, and later stages reference the same ids. A non-interactive label does not need one.
+6. Write `docs/wireframes/README.md`: an index linking every screen file, the flow order between screens, and a **data-testid contract** table (screen, element, testid) that lists every id you assigned. Note in it that verify-acs and ui-review read this contract to trace an acceptance criterion to the element that satisfies it, so the ids must not drift once the build starts.
+7. **Present visually, do not describe.** Tell the human to open the files in a browser (give the paths, and that opening `README.md`'s links walks the flow in order). Do not summarise the layout in prose and ask them to picture it; the whole method is that they approve by looking.
+8. Capture approval or corrections with `AskUserQuestion`, one screen or one batch at a time so each answer is concrete. Apply corrections to the files and re-present until the human approves the shape. Approval here is a checkpoint on the structure, not the four human gates; the taste gate is design-system's, next.
+9. Hand off to the design-system skill, which turns the approved shapes into a styled system. Note that the wireframes and their testid contract stay as the structural reference the styled screens are checked against.
+
+## Rules
+
+- Australian English. Plain, direct language. No filler.
+- Low-fi only: greyscale, system font, no colour, no brand, no real imagery. If it looks designed, it is too finished for this stage.
+- Real words, not placeholder text: the labels, button text, and microcopy come from the specs and are part of what the human approves.
+- Every interactive element gets a stable, descriptive `data-testid`; the id set is a contract that verify-acs and ui-review depend on, so do not rename ids once the build starts.
+- Each wireframe HTML file is self-contained (inline CSS, zero external dependencies) so opening the file in a browser just works, offline, with nothing to install.
+- A skip is allowed only for an `advanced` run and only with a recorded reason; a beginner run always draws the wireframes.
+- Do not proceed to design-system until the human has approved the shapes, or explicitly and reasoned-ly skipped.
+
+## Output
+
+- `docs/wireframes/<screen>.html`, one self-contained low-fi file per screen: grey boxes, real labels and microcopy, no colour or brand, a `data-testid` on every interactive element.
+- `docs/wireframes/README.md`: the screen index and flow order, the **data-testid contract** table (screen, element, testid) that later stages read, and, if the stage was skipped, the recorded reason.

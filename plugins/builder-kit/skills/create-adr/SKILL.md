@@ -8,6 +8,10 @@ allowed-tools: [Read, Write, Edit, Glob, mcp__context7__resolve-library-id, mcp_
 
 Record each major technical decision as an ADR so future-you (and future-Claude) can see why, and so the choice does not get silently re-litigated. Write ADRs to `docs/adr/ADR-<n>-<slug>.md` and an index to `docs/adr/README.md`.
 
+**Experience level.** Read `experienceLevel` and `assistanceMode` from `.claude/builder-kit.json` (default beginner/coach). Adapt tone and confirmation frequency to the mode, never fork the content, and never skip a human gate.
+
+**Coaching authoring standard.** Every choice you put to the human, in an `AskUserQuestion` card or laid out in the document, carries three things: a context-first, plain-language headline that says what the choice decides in their own words (not the jargon term), a one-sentence why that names what turns on it, and a reversibility tag (an easy change later, or a one-way door).
+
 ## Process
 
 1. Read the PRD. Identify the decisions that actually need making: every core-stack area the PRD needs, plus the cross-cutting decisions listed below (a non-technical PRD will not name them, but any real product still needs them). Do not invent speculative tech the product has no use for.

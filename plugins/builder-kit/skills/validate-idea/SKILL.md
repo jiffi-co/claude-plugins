@@ -8,6 +8,10 @@ allowed-tools: [Read, Write, AskUserQuestion]
 
 Runs the Phase-0 idea validation: six hard questions that push a raw idea from a general direction to a specific, buildable one-liner. Produces `docs/idea/validation.md`, the honest record the whole build stands on. Half-baked ideas produce half-baked products; Claude Code amplifies that speed in both directions, so this is where you slow down.
 
+**Experience level.** Read `experienceLevel` and `assistanceMode` from `.claude/builder-kit.json` (default beginner/coach). Adapt tone and confirmation frequency to the mode, never fork the content, and never skip a human gate.
+
+**Coaching authoring standard.** Every choice you put to the human, in an `AskUserQuestion` card or laid out in the document, carries three things: a context-first, plain-language headline that says what the choice decides in their own words (not the jargon term), a one-sentence why that names what turns on it, and a reversibility tag (an easy change later, or a one-way door).
+
 ## When to use / when not
 
 - Use when someone wants to build something and there is no `docs/idea/validation.md` yet, or when they explicitly ask to validate or re-check an idea.
