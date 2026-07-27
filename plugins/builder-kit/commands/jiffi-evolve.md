@@ -1,7 +1,7 @@
 ---
 description: The anti-staleness engine. Harvest the friction-log, check every skill is still current (Context7 + Claude release notes + the live tool roster), propose bounded SKILL.md edits, then keep only the ones that survive the held-out gate (scripts/test/run.sh plus a self-check). Records a changelog.
 argument-hint: "[--dry-run]"
-allowed-tools: Bash(node:*), Read, Edit, WebFetch, Task, mcp__context7__resolve-library-id, mcp__context7__query-docs
+allowed-tools: Bash(node:*), Read, Edit, WebFetch, Agent, mcp__context7__resolve-library-id, mcp__context7__query-docs
 ---
 
 Run the SkillOpt self-improvement loop over this plugin's skills. The point is to stop the skills going stale: as Claude gains new tools, models, MCP servers and processes, a skill that still tells the builder to do something by hand can quietly become wrong. This command reflects on where the skills actually caused friction, checks each one against what Claude can do TODAY, and proposes tight edits, but it keeps an edit only if a real gate says the plugin still passes.

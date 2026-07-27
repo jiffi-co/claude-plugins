@@ -1,6 +1,6 @@
 ---
 name: brand
-description: From-scratch brand selection so the product looks designed, not defaulted, chosen by looking at real options in a browser (tone of voice, palette, type pairing, imagery, whole directions). Reconciles with any ingested brand guide and hands the chosen brand to the design-system skill. Use after the PRD is approved and before design-system, when the user wants to set the brand or names the brand skill.
+description: Pick the brand by looking at real options in a browser (tone of voice, palette, type pairing, imagery, whole direction) and record the choices under docs/brand/. Reconciles with any ingested brand guide and hands the result to design-system. Fires when docs/prd/prd.md is approved and docs/brand/ does not exist yet.
 allowed-tools: [Read, Write, Bash, AskUserQuestion]
 ---
 
@@ -20,6 +20,14 @@ Read `experienceLevel` and `assistanceMode` from `.claude/builder-kit.json` (def
 
 ## Present-visually rule (N10)
 
+**Every picker is handed over as one clickable line.** Each time you write one of the five HTML files, end that turn with its absolute `file://` URL alone on its own line, so the terminal renders it as a link and the builder is one click from their own brand:
+
+```
+file:///Users/you/your-project/docs/brand/palette.html
+```
+
+Run `pwd` if you need the absolute project path rather than guessing it. A relative path the builder has to reassemble is a file most people never open, and an unopened picker means the taste gate gets answered from prose, which is the exact failure this rule exists to stop.
+
 Every one of the five choices below is shown, never described. For each step write a self-contained HTML file into `docs/brand/` (inline CSS only, zero external dependencies, no CDN, no web fonts unless embedded), tell the builder the exact path to open in a browser, and let them choose by looking. Never ask them to imagine a look or pick from a hex list or prose. Any HTML that shows a colour pairing must display the pairing's computed WCAG contrast ratio and its AA verdict, calculated in an inline `<script>` from the relative-luminance formula (so the number the builder sees on screen is real, not eyeballed). Before that HTML is written, verify the same numbers out of band with Bash: run the exact relative-luminance and contrast-ratio node maths the design-system contrast contract specifies (`skills/design-system/SKILL.md`, `luminance` / `ratio` / `pickTextOn`) over each candidate palette's role pairs, read the ratios off stdout, and only offer a palette whose every required pair passes. The out-of-band Bash check and the inline `<script>` compute the same formula, so the verdict on screen matches the one you verified.
 
 **The contrast contract binds every candidate palette (Win 7).** This skill picks the colours the whole product inherits, so a palette that reads well as swatches but fails a real role pair poisons every screen downstream. Before a palette is offered as a candidate, it must pass the full role-pair contract in the design-system skill (`skills/design-system/SKILL.md`), not just the one hero pairing on the swatch: walk text-on-bg, text-on-surface, muted-on-bg, CTA-text-on-primary, link-on-bg, border-on-bg (3:1 for the non-text border) and each interactive state (hover, active, disabled-that-still-must-read) on its background, and it must pass in BOTH light and dark. Body text and equivalents need 4.5:1, large text and non-text UI need 3:1, at a 4.5:1 tolerance of about +/- 0.05. Pick the foreground per background (black or white, whichever computes higher against that token) rather than hardcoding white, since a token-derived surface can be light or dark. Do not offer a palette where any required pair fails in either mode: fix it before it is shown (nudge the token, or drop the palette), never present a failing pair and call the warning noise. The same inline script that prints the swatch ratio walks these pairs, so the verdict on screen is the real one. Any HTML this skill generates also inherits the mode-agnostic parts of the contract: every interactive element (a swatch a builder clicks, a mini-mock button) carries a visible `:focus-visible` outline, and any motion reads `prefers-reduced-motion` and collapses to roughly 40ms.
@@ -33,7 +41,13 @@ Every one of the five choices below is shown, never described. For each step wri
 5. **Imagery and illustration direction.** Write `docs/brand/imagery.html`: two or three directions (for example photographic, flat illustration, geometric or abstract, iconographic) shown as labelled placeholder blocks with a one-line rule for each (what belongs, what does not). For an agent project with no UI surface, keep this light or note it does not apply. Capture the pick, record it in `docs/brand/imagery.md`.
 6. **Whole direction.** Write `docs/brand/directions.html`: two or three complete mini-mocks that combine the tone, palette, type and imagery already chosen into a small real screen from the PRD (a card, a header, a primary button, a line of body copy), so the builder judges the whole rather than the parts. Tell them to open it, capture the single winning direction with `AskUserQuestion`, and consolidate the five choices into `docs/brand/brand.md` (see Output).
 7. **Reconcile with any ingested or supplied brand guide.** If a brand guide exists (from ingest, or brought in by an advanced builder), compare its stated colours, type, tone and imagery against the choices just made. Where they agree, note it. Where they conflict, surface every conflict with `AskUserQuestion` and let the human resolve it; never silently overwrite the guide and never silently override a fresh choice. Record how each conflict was resolved in `docs/brand/brand.md`.
-8. **Hand off.** Report the files written and the five decisions captured, and tell the builder the next step is the design-system skill, which reads `docs/brand/brand.md` as its starting point and turns the brand into tokens. Do not turn the brand into tokens here; that is the design-system skill's job.
+8. **Hand off.** Report the files written and the five decisions captured, ending with the clickable line for the consolidated brand:
+
+   ```
+   file:///Users/you/your-project/docs/brand/brand.md
+   ```
+
+   Then tell the builder the next step is the design-system skill, which reads `docs/brand/brand.md` as its starting point and turns the brand into tokens. Do not turn the brand into tokens here; that is the design-system skill's job.
 
 ## Rules
 
@@ -46,6 +60,8 @@ Every one of the five choices below is shown, never described. For each step wri
 - Do not proceed to design-system until `docs/brand/brand.md` exists and the direction is chosen.
 
 ## Output
+
+**One clickable line per picker as it is written**, and one for `docs/brand/brand.md` at the hand-off: `file://` plus the absolute path, alone on its own line. A picker nobody opened is a taste gate answered from prose.
 
 Under `docs/brand/`:
 

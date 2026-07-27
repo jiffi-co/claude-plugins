@@ -1,7 +1,7 @@
 ---
 name: idea-pack
-description: Turn a raw product idea into a structured Idea Pack (problem, users, user stories, scope, business model, risks) before any code. The core eleven sections are shared; ios and agent projects add platform-specific sections, chosen by projectType in .claude/builder-kit.json (default web). Use after the validate-idea skill, when the user wants to shape a new idea, or asks for an idea pack / product brief.
-allowed-tools: [Read, Write, AskUserQuestion, Skill]
+description: Turn a raw idea into a structured Idea Pack at docs/idea/idea-pack.md (problem, users, user stories, scope, business model, risks). The eleven core sections are shared, and ios and agent projects add platform sections per projectType in .claude/builder-kit.json (default web). Fires when docs/idea/validation.md passes and no idea pack exists.
+allowed-tools: [Read, Write, Edit, AskUserQuestion, Skill]
 ---
 
 # Jiffi Idea Pack
@@ -32,6 +32,14 @@ Produce a build-ready Idea Pack that front-loads the thinking. Interview first, 
 8. **Risks and unknowns**: the assumptions that would sink it if wrong.
 9. **Competitive landscape**: the two or three closest alternatives and why yours differs.
 10. **Business model / commercial**: how the product captures value (or why it does not yet): who pays versus who uses it, the rough pricing or revenue shape, and any commercial constraint the build must respect. If it is free or internal, say so and why. This is a stated assumption until validated, not a forecast.
+
+    This section carries one **required** line, on its own, in this form:
+
+    ```
+    Monthly cost ceiling: <the answer>
+    ```
+
+    Read it back from `costCeiling` in `.claude/builder-kit.json` if it is there (`/builder-kit:start` asks for it at the front door) and confirm rather than re-open. If it is not there, ask for it here with `AskUserQuestion`, and write the answer back into `.claude/builder-kit.json` so it is on disk once rather than in three documents. It is required because two later skills are instructed to read it back — the PRD's fourth judgement question and the architecture step's fifth decision — and before this line existed they had nothing to read, so the ceiling was asked, agreed, and then quietly lost. "Nothing at all, free tiers only" is a real and common answer; an empty line is not.
 11. **Open questions**: what still needs a decision before the PRD.
 
 ## Additional sections by project type
@@ -54,9 +62,10 @@ Web uses the eleven sections above and stops there. An iOS or agent build keeps 
 ## Rules
 
 - Australian English. Plain, direct language. No filler.
+- **Section 10 carries the `Monthly cost ceiling:` line, always.** Confirmed from `.claude/builder-kit.json` when it is recorded there, asked and written back when it is not. Two later skills read it back and neither can invent it.
 - Every claim about users or the market is a stated assumption unless the user gave you evidence.
 - The section set follows `projectType`: web is the eleven sections, ios and agent add their block and nothing more. Those extra sections obey the same evidence rule: what the user did not tell you is an open question, not an invented fact. Do not promise platform behaviour the build has not been scoped to deliver, such as an App Store approval or a hard autonomy or cost guarantee.
-- For a fresh-context second opinion before approval, run the review-idea-pack agent (via the Task/subagent tool). It is advisory only.
+- For a fresh-context second opinion before approval, run the review-idea-pack agent (via the Agent tool). It is advisory only.
 - Do not proceed to the PRD until the user approves the Idea Pack. Approval is a human gate.
 
 ## Output

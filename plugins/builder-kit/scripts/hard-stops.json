@@ -1,0 +1,333 @@
+{
+  "_comment": "The hard-stop registry, machine-readable. The prose version lives in .claude/rules/autonomy.md and is the same six ids. This file exists because a forked subagent cannot ask a human anything: AskUserQuestion is stripped from every subagent in code, with no frontmatter escape. So each stop needs channels that work from where it fires. `preflight` patterns are matched against the phase's PLAN TEXT by the inline parent (skills/build), which asks before it forks. `inflight` patterns are matched against a Bash COMMAND by hooks/hard-stop.mjs, which returns permissionDecision:ask, because a permission prompt is the only channel that reaches a human from inside a fork. Anything that fires in neither is escalated by the worker as a HARD-STOP: line and asked by the parent. Every pattern is a JavaScript regex source, matched case-insensitively. Every stop carries fixtures and negative controls that `node hooks/hard-stop.mjs --selftest` runs, so a pattern that stops matching fails a test rather than failing silently in front of a user.",
+  "version": 1,
+  "stops": [
+    {
+      "id": "H-PAY",
+      "title": "Money movement or a payment",
+      "why": "Spends real funds. Never reversible by a retry.",
+      "preflight": {
+        "patterns": [
+          "\\bstripe\\b",
+          "\\bpaddle\\b",
+          "\\blemon ?squeezy\\b",
+          "\\btake (a |the |real )?payments?\\b",
+          "\\bcharge the (customer|user|card)\\b",
+          "\\blive payment\\b",
+          "\\bcheckout (session|page|flow)\\b",
+          "\\bbilling (flow|portal|cycle)\\b",
+          "\\bpaid (plan|tier|subscription)\\b"
+        ],
+        "header": "Payments",
+        "question": "This phase touches payments. Real money can move, and a payment is not reversible by re-running the phase. How should the build handle it?",
+        "options": [
+          { "label": "Test mode", "description": "Build against test keys and test cards only. Nothing real moves. This is the default and the recommendation." },
+          { "label": "Stub it", "description": "Stub the payment path this phase and wire the real provider in a later, separate phase." },
+          { "label": "Live, I am here", "description": "Use live keys. Only pick this if you are watching the run and you accept a real charge." }
+        ],
+        "fixture": "Phase 4: wire the Stripe checkout session so a customer can pay for a seat.",
+        "mustNotMatch": [
+          "Phase 2: add a pricing page with static copy that links to the sales form."
+        ]
+      },
+      "inflight": {
+        "reason": "This command runs against live payment credentials or creates a real charge. Money that moves is not returned by re-running the phase.",
+        "rules": [
+          {
+            "name": "live payment keys",
+            "patterns": ["\\bsk_live_[A-Za-z0-9]", "\\brk_live_[A-Za-z0-9]", "\\bstripe\\b[^\\n;&|]*\\s--live\\b"],
+            "fixture": "stripe payment_intents create --amount 2000 --currency aud --live",
+            "mustMatch": ["export STRIPE_SECRET_KEY=sk_live_51abcDEF && node scripts/seed-billing.mjs"],
+            "mustNotMatch": ["stripe listen --forward-to localhost:3000/api/webhooks", "export STRIPE_SECRET_KEY=sk_test_51abcDEF", "npm i stripe"]
+          },
+          {
+            "name": "create a charge, refund or subscription",
+            "patterns": ["\\bstripe\\s+(charges|payment_intents|payment_links|invoices|subscriptions|refunds|transfers|payouts)\\s+create\\b"],
+            "fixture": "stripe payment_intents create --amount 2000 --currency aud",
+            "mustMatch": ["stripe subscriptions create --customer cus_123 --items price_123"],
+            "mustNotMatch": ["stripe products list", "stripe trigger payment_intent.succeeded", "stripe customers list --limit 3"]
+          }
+        ]
+      }
+    },
+    {
+      "id": "H-LEGAL",
+      "title": "Accepting legal terms or a ToS",
+      "why": "Binds the user to an agreement they did not read.",
+      "preflight": {
+        "patterns": [
+          "\\baccept(s|ing)? (the )?(terms|tos|eula|licen[cs]e agreement)\\b",
+          "\\bagree(ing)? to (the )?(terms|tos|agreement)\\b",
+          "\\bclick(ing)? through (the )?(terms|agreement)\\b",
+          "\\bsign (the )?(contract|agreement|dpa)\\b",
+          "\\bdata processing agreement\\b",
+          "\\bdeveloper program licen[cs]e agreement\\b"
+        ],
+        "header": "Legal terms",
+        "question": "This phase involves accepting terms on your behalf. An agent must not bind you to an agreement you have not read. Who accepts?",
+        "options": [
+          { "label": "I will", "description": "Pause here. You read and accept the terms yourself, then the build carries on. This is the recommendation." },
+          { "label": "Already done", "description": "You have already accepted these terms. The build continues without pausing again." },
+          { "label": "Skip it", "description": "Drop the step that needs the agreement and record the gap in the plan." }
+        ],
+        "fixture": "Phase 1: accept the Apple Developer Program Licence Agreement so the app can be signed.",
+        "mustNotMatch": [
+          "Phase 6: write the privacy policy page and link it from the footer."
+        ]
+      },
+      "inflight": {
+        "reason": "This command accepts an agreement on your behalf. An agent must not bind you to terms you have not read.",
+        "rules": [
+          {
+            "name": "accept a platform licence",
+            "patterns": ["\\bxcodebuild\\b[^\\n;&|]*\\s-license\\b", "\\bsdkmanager\\b[^\\n;&|]*--licenses\\b", "\\bflutter\\s+doctor\\b[^\\n;&|]*--android-licenses\\b"],
+            "fixture": "sudo xcodebuild -license accept",
+            "mustMatch": ["yes | sdkmanager --licenses"],
+            "mustNotMatch": ["xcodebuild test -scheme App -destination 'platform=iOS Simulator,name=iPhone 16'", "xcodebuild build -scheme App"]
+          },
+          {
+            "name": "agree to terms on the command line",
+            "patterns": ["--accept[-_]?(the[-_])?(terms|licen[cs]e|eula|tos)\\b", "--agree[-_]?(to[-_])?(terms|tos|licen[cs]e)\\b"],
+            "fixture": "vendor-cli init --accept-terms",
+            "mustMatch": ["installer --agree-to-terms --quiet", "some-cli deploy --accept-eula"],
+            "mustNotMatch": ["npm run build", "git commit -m \"add the terms page\""]
+          }
+        ]
+      }
+    },
+    {
+      "id": "H-DESTROY",
+      "title": "A destructive irreversible action",
+      "why": "Cannot be undone; a wrong call loses work permanently.",
+      "preflight": {
+        "patterns": [
+          "\\bdrop\\s+(the\\s+|a\\s+)?([\\w-]+\\s+){0,3}(database|table|schema|column)s?\\b",
+          "\\bdelete\\s+(the\\s+|a\\s+)?([\\w-]+\\s+){0,3}(database|account|repo(sitory)?|bucket|project|user data)s?\\b",
+          "\\btruncate\\s+(the\\s+)?([\\w-]+\\s+){0,3}tables?\\b",
+          "\\bforce[- ]push\\b",
+          "\\breset --hard\\b",
+          "\\bwipe (the )?(database|data|disk)\\b",
+          "\\bdestructive migration\\b",
+          "\\bdata loss\\b",
+          "\\birreversible\\b",
+          "\\bcannot be undone\\b",
+          "\\bcan not be undone\\b"
+        ],
+        "header": "Destructive step",
+        "question": "This phase contains a step that destroys data or rewrites history, and it cannot be undone by re-running the phase. How do you want it handled?",
+        "options": [
+          { "label": "Back up first", "description": "Take a backup or a dump before the destructive step, then proceed. This is the recommendation." },
+          { "label": "Ask me again", "description": "Stop again at the exact moment the destructive command is about to run." },
+          { "label": "Skip it", "description": "Drop the destructive step from this phase and record it in the plan for a human to do." }
+        ],
+        "fixture": "Phase 3: drop the legacy sessions table once the new store is live.",
+        "mustMatch": [
+          "Data migrations and rollback: irreversible, back up first.",
+          "This migration collapses duplicate rows and cannot be undone."
+        ],
+        "mustNotMatch": [
+          "Phase 3: add a soft-delete flag to the posts table so nothing is removed."
+        ]
+      },
+      "inflight": {
+        "reason": "This command destroys work or rewrites history. It is not undone by re-running the phase.",
+        "rules": [
+          {
+            "name": "force push",
+            "patterns": ["\\bgit\\s+push\\b[^\\n;&|]*(--force\\b|--force-with-lease\\b|(^|\\s)-f(\\s|$))", "\\bgit\\s+push\\b[^\\n;&|]*\\s\\+[A-Za-z0-9_./-]+:"],
+            "fixture": "git push --force origin main",
+            "mustMatch": ["git push origin +main:main", "npm test && git push --force-with-lease"],
+            "mustNotMatch": ["git push -u origin feature/phase-2-auth", "git push"]
+          },
+          {
+            "name": "hard reset",
+            "patterns": ["\\bgit\\s+reset\\b[^\\n;&|]*--hard\\b"],
+            "guard": "git-reset-hard",
+            "fixture": "git reset --hard HEAD~3",
+            "mustMatch": ["git reset --hard && git reset --hard HEAD~5", "git fetch && git reset --hard origin/main"],
+            "mustNotMatch": ["git reset --soft HEAD~1", "git restore --staged ."]
+          },
+          {
+            "name": "recursive force delete",
+            "patterns": ["(^|[;&|(/\\s])rm\\s+(-[A-Za-z]*[rR][A-Za-z]*\\s+-[A-Za-z]*f|-[A-Za-z]*f[A-Za-z]*\\s+-[A-Za-z]*[rR]|-[A-Za-z]*(rf|fr|Rf|fR)[A-Za-z]*|--recursive\\s+--force|--force\\s+--recursive)\\b"],
+            "guard": "rm-rf-scope",
+            "fixture": "rm -rf ~/dev/my-app/src",
+            "mustMatch": [
+              "rm -rf /tmp/important && rm -rf node_modules",
+              "/bin/rm -rf /tmp/important",
+              "rm --recursive --force /tmp/important",
+              "cd app && rm -rf src/legacy",
+              "sudo rm -rf /usr/local/lib/thing",
+              "rm -rf node_modules/../../etc"
+            ],
+            "mustNotMatch": ["rm -rf node_modules", "rm -rf .next", "rm -rf .builder-kit-tmp", "rm -f tmp.log", "npm run clean", "rm -rf dist build coverage", "rm -rf node_modules && npm install", "npm run build && rm -rf .next/cache"]
+          },
+          {
+            "name": "delete a repository",
+            "patterns": ["\\bgh\\s+repo\\s+delete\\b"],
+            "fixture": "gh repo delete jiffi-co/my-app --yes",
+            "mustNotMatch": ["gh repo create my-app --private", "gh repo view"]
+          },
+          {
+            "name": "reset a database",
+            "patterns": ["\\bsupabase\\s+db\\s+reset\\b", "\\bprisma\\s+migrate\\s+reset\\b", "\\bdrizzle-kit\\s+drop\\b"],
+            "fixture": "npx prisma migrate reset --force",
+            "mustNotMatch": ["npx prisma migrate dev --name add_users", "supabase db diff"]
+          }
+        ]
+      }
+    },
+    {
+      "id": "H-DEPLOY",
+      "title": "A production deploy",
+      "why": "Puts unverified change in front of real users.",
+      "preflight": {
+        "patterns": [
+          "\\bdeploy(ing|ment)? to prod(uction)?\\b",
+          "\\bproduction deploy\\b",
+          "\\bship (it )?to prod(uction)?\\b",
+          "\\bpromote to production\\b",
+          "\\brelease to production\\b",
+          "\\bgo live\\b"
+        ],
+        "header": "Production deploy",
+        "question": "This phase deploys to production, which puts unverified change in front of real users. How do you want it handled?",
+        "options": [
+          { "label": "Preview only", "description": "Deploy to a preview or staging URL this phase. Production stays untouched until you say so. This is the recommendation." },
+          { "label": "Ask me again", "description": "Stop again at the exact moment the production deploy command is about to run." },
+          { "label": "Deploy live", "description": "Deploy to production in this run. Only pick this if you are watching." }
+        ],
+        "fixture": "Phase 6: deploy to production and point the domain at the new build.",
+        "mustNotMatch": [
+          "Phase 5: push a preview deploy and check the Lighthouse score."
+        ]
+      },
+      "inflight": {
+        "reason": "This command deploys to production. Real users see the result immediately.",
+        "rules": [
+          {
+            "name": "vercel production deploy",
+            "patterns": ["\\bvercel\\b[^\\n;&|]*(--prod\\b|--production\\b)"],
+            "fixture": "npx vercel --prod",
+            "mustNotMatch": ["npx vercel", "vercel env pull", "vercel deploy"]
+          },
+          {
+            "name": "fly deploy",
+            "patterns": ["\\bfly(ctl)?\\s+deploy\\b"],
+            "fixture": "fly deploy --remote-only",
+            "mustNotMatch": ["fly status", "flyctl logs"]
+          }
+        ]
+      }
+    },
+    {
+      "id": "H-PROVISION",
+      "title": "Authenticating or provisioning an unbound provider",
+      "why": "Creates accounts, incurs cost, and grants access under the user's name.",
+      "preflight": {
+        "patterns": [
+          "\\bprovision(ing)?\\b",
+          "\\bcreate (a |an |the )?(new )?(account|project|database|bucket|instance|cluster)\\b",
+          "\\bsign up (for|to)\\b",
+          "\\bset up (a |an )?(vercel|supabase|neon|clerk|resend|sentry|railway|fly\\.io|planetscale|upstash|inngest|firebase|expo) (account|project)\\b",
+          "\\bconnect (your|the) (github|vercel|supabase|stripe|apple) account\\b",
+          "\\boauth app\\b",
+          "\\bapi key from\\b"
+        ],
+        "header": "Provisioning",
+        "question": "This phase creates or authenticates an account with a third-party provider. That can cost money and grants access under your name. How do you want it handled?",
+        "options": [
+          { "label": "Local only", "description": "Stay on local or free-tier infrastructure this phase, and provision the real thing later as its own step. This is the recommendation." },
+          { "label": "I will do it", "description": "Pause so you create the account yourself, then paste the keys in and the build carries on." },
+          { "label": "Go ahead", "description": "Create it during the run. You accept any cost and any terms it involves." }
+        ],
+        "fixture": "Phase 2: provision a Neon Postgres database and wire the connection string.",
+        "mustNotMatch": [
+          "Phase 2: run Postgres locally in Docker and point DATABASE_URL at it."
+        ]
+      },
+      "inflight": {
+        "reason": "This command creates an account-level resource with a third-party provider, or signs you in to one. It can cost money and it grants access under your name.",
+        "rules": [
+          {
+            "name": "create a hosted project, database or bucket",
+            "patterns": [
+              "\\bsupabase\\s+projects?\\s+create\\b",
+              "\\b(neon|neonctl)\\s+projects?\\s+create\\b",
+              "\\bpscale\\s+(database|org)\\s+create\\b",
+              "\\bfly(ctl)?\\s+(apps\\s+create|launch)\\b",
+              "\\brailway\\s+init\\b",
+              "\\bwrangler\\s+(d1\\s+create|kv:namespace\\s+create|r2\\s+bucket\\s+create)\\b",
+              "\\bgcloud\\s+projects\\s+create\\b",
+              "\\bvercel\\s+projects?\\s+add\\b",
+              "\\baws\\s+[a-z0-9-]+\\s+create-[a-z-]+\\b"
+            ],
+            "fixture": "supabase projects create snip --org-id abc --region ap-southeast-2",
+            "mustMatch": ["npx supabase projects create snip", "flyctl launch --now", "aws s3api create-bucket --bucket my-app-uploads"],
+            "mustNotMatch": ["supabase db diff", "supabase start", "wrangler dev", "aws s3 ls", "vercel env pull", "fly status", "npx prisma migrate dev --name add_users"]
+          },
+          {
+            "name": "sign in to a provider",
+            "patterns": [
+              "\\b(vercel|supabase|stripe|railway|wrangler|netlify|heroku|expo|eas|pscale|neon|neonctl|doctl|gcloud|firebase)\\s+(auth\\s+)?login\\b",
+              "\\bgh\\s+auth\\s+login\\b",
+              "\\baws\\s+configure\\b(?!\\s+list)"
+            ],
+            "fixture": "gh auth login",
+            "mustMatch": ["npx supabase login", "vercel login", "gcloud auth login"],
+            "mustNotMatch": ["gh auth status", "vercel whoami", "supabase status", "aws configure list", "gh repo create my-app --private --source=. --push"]
+          }
+        ]
+      }
+    },
+    {
+      "id": "H-SHIP",
+      "title": "The final ship or merge",
+      "why": "The last gate before change is permanent and public.",
+      "preflight": {
+        "patterns": [
+          "\\bmerge (the pr|to main|into main)\\b",
+          "\\bfinal ship\\b",
+          "\\bsubmit\\b[^.]{0,40}\\bto the app store\\b",
+          "\\bapp store connect\\b",
+          "\\btestflight\\b",
+          "\\bnpm publish\\b",
+          "\\bcut (the )?release\\b",
+          "\\bpublish the (app|package|release)\\b"
+        ],
+        "header": "Ship",
+        "question": "This phase ships or merges, which is the last gate before the change is permanent and public. How do you want it handled?",
+        "options": [
+          { "label": "Open a PR", "description": "Push the branch and open a pull request for you to review and merge yourself. This is the recommendation." },
+          { "label": "Ask me again", "description": "Stop again at the exact moment the ship or merge command is about to run." },
+          { "label": "Ship it", "description": "Complete the ship in this run. Only pick this if you are watching." }
+        ],
+        "fixture": "Phase 8: submit to the App Store and start the TestFlight rollout.",
+        "mustMatch": [
+          "Phase 8: submit the iOS build to the App Store.",
+          "Phase 9: submit the final build to the App Store once the beta is signed off."
+        ],
+        "mustNotMatch": [
+          "Phase 8: open a pull request and request review from the team."
+        ]
+      },
+      "inflight": {
+        "reason": "This command ships to a store or a public registry. It cannot be recalled once it is accepted.",
+        "rules": [
+          {
+            "name": "expo submit",
+            "patterns": ["\\beas\\s+submit\\b"],
+            "fixture": "eas submit --platform ios --latest",
+            "mustNotMatch": ["eas build --platform ios", "eas whoami"]
+          },
+          {
+            "name": "apple upload",
+            "patterns": ["\\bxcrun\\s+altool\\b[^\\n;&|]*--upload", "\\bxcrun\\s+notarytool\\s+submit\\b"],
+            "fixture": "xcrun altool --upload-app -f build/App.ipa -t ios",
+            "mustNotMatch": ["xcrun simctl list", "xcodebuild test -scheme App"]
+          }
+        ]
+      }
+    }
+  ]
+}

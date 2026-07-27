@@ -1,6 +1,6 @@
 ---
 name: design-system
-description: Interview the human for taste (mood, personality, brand), then write docs/design-system/MASTER.md plus a dual-mode token scaffold (light, dark, semantic, provider, toggle, FOUC). Use after the ADRs are accepted and the user asks to create the design system, or names the design-system skill.
+description: Interview the human for taste (mood, personality, brand), then write docs/design-system/MASTER.md plus a dual-mode token scaffold (light, dark, semantic, provider, toggle, FOUC). Fires when docs/adr/ carries an accepted styling and framework decision, the wireframes and brand are settled, and docs/design-system/MASTER.md does not exist.
 allowed-tools: [Read, Write, Edit, Bash, Glob, AskUserQuestion, Skill]
 ---
 
@@ -93,7 +93,7 @@ Run it over the real tokens (Bash), read the numbers off stdout, and write those
 - Never treat a contrast warning as noise. A sub-AA ratio is a fail to fix, not a lint to mute.
 - Never ship a role pair that passes in one mode only. Both light and dark are in scope for every row.
 
-**Motion collapse (`prefers-reduced-motion`).** Every animation in the generated system reads `prefers-reduced-motion` and collapses to roughly 40ms (an effectively instant transition, not a jarring cut) when the user asks for reduced motion. This is not optional polish; it rides in the same contract because both are accessibility floors the build inherits from the tokens.
+**Motion collapse (`prefers-reduced-motion`).** Every animation in the generated system reads `prefers-reduced-motion` and collapses to roughly 40ms (an effectively instant transition, not a jarring cut) when reduced motion is turned on. This is not optional polish; it rides in the same contract because both are accessibility floors the build inherits from the tokens.
 
 ```css
 @media (prefers-reduced-motion: reduce) {

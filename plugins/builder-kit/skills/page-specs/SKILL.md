@@ -1,7 +1,7 @@
 ---
 name: page-specs
-description: Write one buildable spec per page (layout, components, states, data, interactions, motion, and a named emotional target) into docs/design-system/pages/. Use after the implementation plan and design system exist, or when the user asks to spec the pages/screens or names the page-specs skill.
-allowed-tools: [Read, Write, Edit, Glob, AskUserQuestion]
+description: Write one buildable spec per page (layout, components, states, data, interactions, motion, and a named emotional target) into docs/design-system/pages/. Fires when docs/implementation-plan.md and docs/design-system/MASTER.md both exist and docs/design-system/pages/ is empty.
+allowed-tools: [Read, Write, Edit, Glob, AskUserQuestion, Skill]
 ---
 
 # Page Specs

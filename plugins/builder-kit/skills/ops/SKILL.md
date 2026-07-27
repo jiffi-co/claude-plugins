@@ -1,6 +1,6 @@
 ---
 name: ops
-description: Use when the user has a live or in-progress product and asks about day-to-day running (context/cost house rules, monitoring, keeping the toolchain current), or names the ops skill. A reference to return to throughout every project, not a one-shot task.
+description: The house rules for running a build and a live product well, covering context and cost discipline, monitoring, and keeping the toolchain current. A standing reference, not a one-shot task. Fires between phases, when context passes the 60 percent house limit, when a deployed product has no error tracking wired, and when tracking is wired but has never been watched to fire.
 allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, AskUserQuestion]
 ---
 
@@ -10,7 +10,7 @@ The house rules for running Claude Code and a live product well: manage context 
 
 ## When to use / when not
 
-- Use when: the user asks how to manage context or cost, wants error monitoring set up, asks how to update their tools, or wants the monthly freshness routine. Also use as the standing reference between phases.
+- Use when: context is past the 60 percent house limit, spend needs a decision, a live product has no error tracking wired, or the toolchain is due its monthly freshness pass. Also use as the standing reference between phases.
 - Not for: building features (that is `implementation-plan` then `phase-start`), shipping (`ship`), or debugging a specific failure (trace the bug inline, or use `/debug` if your Claude Code ships it).
 - This skill PROMPTS on judgement calls (budget, model choice, when to clear). It never decides them for the user.
 
@@ -37,30 +37,34 @@ Context is the number-one cause of Claude degrading. Enforce as house rules:
 - Model choice is the user's call and account-dependent (see the `implementation-plan` model decision guide). Do not hard-recommend one.
 - Agent Teams use materially more tokens than a single session — reach for them only when the work genuinely needs parallel sessions; subagents are the default way to parallelise.
 
-### 3. Monitoring (Sentry)
+### 3. Monitoring, and proving it fired
 
-For a live product, wire up error monitoring so you hear about failures before users report them.
+For a live product, wire up error monitoring so you hear about failures before users report them. **A monitor nobody has watched fire looks exactly like a healthy one**, so wiring it is half the job and proving it is the other half. This section is not finished until an error you caused on purpose has been seen arriving.
 
-1. Confirm with the user, then install and configure Sentry for the stack (its wizard walks the setup):
+1. Confirm with the user, then install and configure error tracking for the stack (a Sentry-class service; its wizard walks the setup):
    ```bash
    npx @sentry/wizard@latest -i nextjs
    ```
 2. Put the DSN in environment config, never in a committed file. Verify `.env*` is gitignored.
-3. After deploy, trigger a test error and confirm it lands in the Sentry dashboard — **verify the check ran**; a silently-failing monitor looks identical to a healthy one.
+3. **Prove it, do not assert it.** After the deploy, walk these four in order and keep the evidence from each; a step you did not watch happen is a step that did not happen (PRINCIPLES.md, state honesty).
+   1. **Cause a real error on purpose**, in the deployed environment rather than locally, from a route or path that only you will hit. A deliberate throw behind an unlinked route is enough. Note the exact time you triggered it.
+   2. **Fetch it back from the monitor rather than from the app.** Query the service's own API for events since that timestamp and read the response, or have the user open the dashboard and tell you what they see. Either is evidence; assuming the wizard's success message means events are arriving is not.
+   3. **Check the alert reached a person.** An event sitting in a dashboard nobody opens is not monitoring. Confirm the alert rule exists, that its destination is somewhere the user actually reads (email, a chat channel, a phone), and that this test error produced a message there. If it did not, the alert routing is the defect, not the tracking.
+   4. **Record the proof.** Append one line to `docs/decisions.md`: the date, what you triggered, where it arrived, and where the alert landed. Then remove the deliberate error. Without that line, the next person has no way to tell a working monitor from an untested one, which is the whole failure this section exists to prevent.
+4. If any of the four cannot be completed (no deployed environment yet, no alert destination decided), say which one and why, and leave monitoring recorded as **not proven** rather than done. A half-wired monitor described as finished is worse than none, because it buys false confidence.
 
 ### 4. Keeping the toolchain current
 
 - **Claude Code:** native installer auto-updates in the background — nothing to run by hand. Choose speed with `autoUpdatesChannel` (`latest` default, or `stable` ~a week behind). On the demoted npm path (needs Node 22+): `npm update -g @anthropic-ai/claude-code`.
 - **Health check:** `claude doctor` from the shell, or `/doctor` in-session. The old `claude /doctor` form does not work.
-- **Beads:** update from `gastownhall/beads` (Dolt-backed); check its README for the current command.
 - **Plugins:** run `/plugin marketplace update` at the start of each module, then `/reload-plugins` if prompted.
 - After a major Claude Code update, re-run `/jiffi-doctor` to confirm everything still works.
 
 ### 5. Monthly freshness routine
 
-Ecosystem churn outpaces any static doc. Once a month, walk the project's pinned versions, URLs and tool claims against live sources, and track one item per rotted claim. If you use Beads: `bd create -t "Freshness: <claim that went stale>"`; otherwise track the same in native Tasks or a simple `docs/tasks.md` checklist.
+Ecosystem churn outpaces any static doc. Once a month, walk the project's pinned versions, URLs and tool claims against live sources, and track one item per rotted claim:
 ```bash
-bd create -t "Freshness: <claim that went stale>"
+node "${CLAUDE_PLUGIN_ROOT}/scripts/task-store.mjs" write freshness-<slug> --subject "Freshness: <claim that went stale>"
 ```
 Keep a "verified against" note (tool versions + date) on docs that pin versions.
 
@@ -90,13 +94,13 @@ The full contract lives in `.claude/rules/logging.md` (scaffolded by `/jiffi-ini
 - Never commit `.env` files or put secrets (Sentry DSN, DB URLs) in tracked config; use `.claude/settings.local.json` or environment config.
 - Never pass a secret as a command-line argument; stdin or the environment only. Redact known token shapes (JWT, `ghp_`, `sbp_`, `vc_`, `sk_live_`, PEM) before echoing any line back.
 - The application's own logs obey `.claude/rules/logging.md`: the Saturday-morning test, the four-rung severity ladder, and the hard never-log list.
-- Monitoring is not "done" until a test error has been seen in the dashboard.
+- **Monitoring is not done until a deliberate error has been seen arriving and the alert has reached a person**, with the proof written into `docs/decisions.md`. Anything short of that is recorded as not proven, never as done.
 - Cost and context are managed by the human, not by waiting for auto-compaction — check `/context` and `/usage` yourself.
 
 ## Output
 
 This is a reference skill; it writes files only when a section acts:
 
-- Section 3 (monitoring): Sentry config files created by its wizard, DSN in environment config (never tracked).
-- Section 5 (freshness): one tracked item per stale claim (a `bd` issue if you use Beads, otherwise a native Task or `docs/tasks.md` line); optional "verified against" note in the relevant doc.
+- Section 3 (monitoring): error-tracking config files created by the wizard, DSN in environment config (never tracked), and one line in `docs/decisions.md` recording the deliberate error, where it arrived, and where the alert landed. Monitoring with no such line is not proven.
+- Section 5 (freshness): one tracked item per stale claim (a task file under `docs/tasks/`); optional "verified against" note in the relevant doc.
 - Section 6: appends to `docs/decisions.md` or writes `docs/adr/NNNN-*.md` via the dedicated skills, not inline here.

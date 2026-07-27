@@ -1,17 +1,17 @@
 ---
-description: Verify the machine and project are ready for the Jiffi build workflow — a tiered, read-only health check that replaces the manual Verify Setup checklist.
+description: Deprecated alias for /builder-kit:setup. Runs the same health check, read-only, and points at the new name.
 argument-hint: "[--json]"
 allowed-tools: Bash(node:*)
 ---
 
-Run the shipped, read-only setup health check and report its output.
+This command is now `/builder-kit:setup`. Tell the user that once, then carry on.
 
 ```
 node "${CLAUDE_PLUGIN_ROOT}/scripts/doctor.mjs" $ARGUMENTS
 ```
 
-The script probes tools in tiers — **core** (Node 22+, Claude Code, git, gh + auth), **recommended** (Beads, a docs MCP), **optional** — plus project config when run inside a project (CLAUDE.md, AGENTS.md, the `.env` deny rule, the docs folders). It changes nothing (there is deliberately no `--fix` for a beginner audience).
+Without arguments this is a read-only health check. It reports core tooling (Node 22 or newer, git, gh), the live session (plugin loaded, docs MCP answering, git identity, gh scopes, worktree), then recommended, optional, and the project scaffold.
 
-Report the table verbatim. A **core** failure means "not ready" and the script exits non-zero; the fix line tells the user exactly what to install or run. Recommended/optional warnings are worth doing but do not block. For support, `--json` prints a paste-able machine-readable result with the same exit-code contract (non-zero only when a core check fails).
+Report the table verbatim. A blocking failure exits non-zero and its fix line says exactly what to do. `--json` gives support a paste-able artifact with the same exit contract.
 
-If a core tool is missing, point the user at the fix line rather than trying to install it for them.
+To install what is missing rather than only report it, run `/builder-kit:setup`. That is where `--fix` lives: it installs everything that needs no password and writes the rest to a bootstrap script with one line to paste.

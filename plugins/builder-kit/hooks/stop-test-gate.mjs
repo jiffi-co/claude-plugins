@@ -13,8 +13,38 @@
 // has not written any tests. The one thing it must never do is claim a pass for a
 // check that never ran, which is why the absent-command case no-ops instead of
 // guessing "npm test".
+//
+// The one block it does make is recorded to .claude/builder-kit/last-block.md, because
+// Claude Desktop renders nothing when a hook blocks and the user would otherwise see a
+// hang. Only the deliberate block is reported; every fail-open path stays silent.
 import { readFileSync, existsSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
+
+// Dynamic, like secret-scan's: a broken or missing reporter must not take the gate
+// with it. Here the direction is milder (a load failure would fail open, which is
+// this hook's default posture anyway) but the same rule applies. Reporting is a
+// side channel and never decides the exit code.
+let reportBlock = null
+try {
+  ;({ reportBlock } = await import('./block-report.mjs'))
+} catch {
+  reportBlock = null
+}
+
+// The try is load-bearing: this runs inside the hook's outer fail-open catch, so a
+// reporter that throws would exit 0 and quietly drop a block the user asked for.
+function deny(o) {
+  try {
+    if (typeof reportBlock === 'function') return reportBlock(o)
+  } catch {
+    // fall through to the message below
+  }
+  return (
+    `${o.reason}\n\n${o.remedy}\n\nTell the user which tests failed. In the Claude Code panel ` +
+    'of Claude Desktop a blocked turn renders nothing at all, so unless you say it they see a hang.\n'
+  )
+}
+
 let raw = ''
 process.stdin.setEncoding('utf8')
 process.stdin.on('data', (c) => (raw += c))
@@ -55,10 +85,17 @@ process.stdin.on('end', () => {
     // non-zero result from a command that actually ran blocks the turn.
     if (r.error || r.status === 127 || r.status == null) process.exit(0)
     if (r.status !== 0) {
-      process.stderr.write(
-        `Stop blocked by the builder-kit test gate: the ${projectType} test command (\`${cmd}\`) exited ${r.status}. ` +
-          `Do not call this phase done with a red suite. Fix the failures, or set "stopTestGate": false in .claude/builder-kit.json.\n`,
-      )
+      // No stopId: this is a project gate, not one of the six hard stops in
+      // .claude/rules/autonomy.md, and citing an id that does not exist is worse
+      // than citing none.
+      const reason =
+        `Stopped by the builder-kit test gate: the ${projectType} test command ` +
+        `(\`${cmd}\`) exited ${r.status}.`
+      const remedy =
+        'Do not call this phase done with a red suite. Fix the failing tests and finish the ' +
+        'turn. If the gate is wrong for this project, set "stopTestGate": false in ' +
+        '.claude/builder-kit.json.'
+      process.stderr.write(deny({ hook: 'stop-test-gate', reason, remedy, root: input.cwd }))
       process.exit(2)
     }
     process.exit(0)

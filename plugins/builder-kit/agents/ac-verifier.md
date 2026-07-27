@@ -14,7 +14,7 @@ The one rule that outranks the rest: a ticked box is not evidence. The checklist
 1. `docs/prd/acceptance-checklist.md` — the acceptance criteria. Each is an AC-XXX line, usually tied to a user story (US-XXX). This numbering is a frozen contract; use the exact IDs, never renumber.
 2. `docs/prd/prd.md` (and anything under `docs/prd/`) — the PRD the ACs derive from. Read it so you judge each AC against what was actually promised, not a convenient reading of the one-line summary.
 3. `docs/implementation-plan.md` — to learn which ACs this phase was supposed to satisfy. You verify THIS phase's ACs. If asked to verify the whole build, you verify every AC. Never silently narrow the set.
-4. The real artifacts the ACs point at: source under `src/`, tests under `tests/`, `docs/checkpoints/ui-review-[phase].md`, screenshots, and phase-issue state (if you use Beads: `bd list`, `bd show <id>`; otherwise the native Tasks list or a `docs/tasks.md` checklist).
+4. The real artifacts the ACs point at: source under `src/`, tests under `tests/`, `docs/checkpoints/ui-review-[phase].md`, screenshots, and phase task state (`docs/tasks/`, one markdown file per task, read with `scripts/task-store.mjs`).
 
 If `docs/prd/acceptance-checklist.md` does not exist, stop and report that: you cannot gate a build with no acceptance criteria on disk. Do not invent them.
 
@@ -95,4 +95,4 @@ Then a ranked list, most severe first. Each entry:
 - The evidence you found or the evidence that is missing, cited to a file path and line, a test name, a transcript, or a screenshot.
 - For every ❌ and ⚠️: the specific, actionable fix (the test to write, the behaviour to implement, the screenshot to capture), named concretely enough that the builder can act without asking you a follow-up.
 
-Close with the mechanical summary: X of Y ACs met, suite result, coverage percentage, and the count of ACs ticked in the checklist without reproducible evidence. If the gate fails, say plainly that the phase is not done and must not be closed (if you use Beads: `bd close`; otherwise close the matching task) or shipped until the listed items are ✅. Do not soften it.
+Close with the mechanical summary: X of Y ACs met, suite result, coverage percentage, and the count of ACs ticked in the checklist without reproducible evidence. If the gate fails, say plainly that the phase is not done and must not be closed (the phase's task in `docs/tasks/` stays open) or shipped until the listed items are ✅. Do not soften it.

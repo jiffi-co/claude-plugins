@@ -1,19 +1,21 @@
 ---
-description: Scaffold a Jiffi-workflow project — docs structure, CLAUDE.md, AGENTS.md, .claude config and the per-project gate — from shipped templates, with forge-new discipline (never overwrites, verifies, rolls back on failure). Supports --type web|ios|agent.
+description: "DEPRECATED alias for /builder-kit:start. Kept so published links and older guides keep working. Scaffolds a Jiffi-workflow project after asking one question: where you are starting from."
 argument-hint: "[project name] [--type web|ios|agent]"
-allowed-tools: Bash(node:*)
+allowed-tools: AskUserQuestion, Bash(node:*)
 ---
 
-Scaffold a project set up for the Jiffi build workflow by running the shipped script. It copies templates from the plugin (one source of truth, so the scaffold cannot drift from the guides), never overwrites an existing file, post-flight verifies, and rolls back anything it created if a step fails.
+**Deprecated.** This is now `/builder-kit:start`. The old name still works, and will keep working, because it is printed in guides and posts that are already out there. Use `/builder-kit:start` from here on.
+
+Do exactly what `/builder-kit:start` does, in the same order:
+
+1. Ask **one** question with AskUserQuestion, before anything is written to disk: "Where are you starting from?" with three options, `Nothing yet` (`nothing-yet`), `An idea` written down or in idea8 (`idea`), `An existing build`, meaning a prototype, repo or running app (`existing-build`).
+
+2. Scaffold, carrying the answer:
 
 ```
-node "${CLAUDE_PLUGIN_ROOT}/scripts/init.mjs" $1
+node "${CLAUDE_PLUGIN_ROOT}/scripts/init.mjs" --entry-point <answer> $1
 ```
 
-- With a **name** (`$1`), it creates `./$1` and refuses if that directory already exists and is non-empty (it will not clobber your work).
-- With **no name**, it scaffolds the current directory in place, skipping any file that already exists and reporting what it skipped.
-- With **`--type web|ios|agent`** (default `web`), it lays the shared workflow base and then the domain overlay for that target, and records the type in `.claude/builder-kit.json` so the tail skills (`ci-setup`, `ship`, `ui-review`, the reviewers) and `/jiffi-doctor` branch to the right toolchain. The spine (idea → PRD → ADRs → plan → build loop) is identical across all types.
+The script exits 2 without `--entry-point`. It has no default, on purpose.
 
-After it runs, report exactly what was created and skipped, then tell the user the next step it prints (`/validate-idea`, then `/idea-pack`). Do not hand-write the scaffolded files yourself — the script owns them so the plugin and the guides stay in sync.
-
-Note: a Claude Code plugin cannot set a project's permission rules for you, so the scaffolded `.claude/settings.json` carries the deny-`.env` rule and registers the builder-kit marketplace + plugin, so trusting the new folder offers to enable it.
+Read `commands/start.md` in this plugin for the full behaviour: what the entry point does (marks which stages arrive with material in hand), what it does not do (branch or skip any stage), and the in-place merge rules. Mention to the builder, once, that the command has been renamed to `/builder-kit:start`.

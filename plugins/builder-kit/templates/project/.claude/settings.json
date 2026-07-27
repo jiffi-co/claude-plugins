@@ -1,5 +1,12 @@
 {
   "permissions": {
+    "allow": [
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(npm test:*)",
+      "Bash(node:*)"
+    ],
     "deny": [
       "Read(.env)",
       "Read(.env.*)",
@@ -16,5 +23,7 @@
       "source": { "source": "github", "repo": "jiffi-co/claude-plugins" }
     }
   },
-  "enabledPlugins": ["builder-kit@jiffi-claude-plugins"]
+  "enabledPlugins": {
+    "builder-kit@jiffi-claude-plugins": true
+  }
 }

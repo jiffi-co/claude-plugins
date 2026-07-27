@@ -1,14 +1,17 @@
 {
-  "_comment": "Shipped DEFAULT gate. Generic and deliberately lenient (test/typecheck are optional so it never blocks a fresh project that has neither yet). /jiffi-init scaffolds docs/checkpoints/checkpoint.json and per-phase manifests that TIGHTEN these — e.g. make tests required once a test script exists, and pin the exact artifacts each phase must produce.",
+  "_comment": "Shipped DEFAULT **BUILD** gate. It runs DURING a phase and before anything downstream. Generic and deliberately lenient (tests and typecheck are optional so it never blocks a fresh project that has neither yet). /builder-kit:start scaffolds docs/checkpoints/checkpoint.json and build-phase scaffolds per-phase manifests that TIGHTEN these.",
+  "_split": "The acceptance-criteria row is NOT here, and that is the point. It lives in checkpoint-close-manifest.json (and in docs/checkpoints/phase-<N>-close.json). A single gate that demands ticked criteria before the evidence pass has run fails by construction on every first close, and the only way through it is to tick the boxes to make it green, which inverts evidence-then-tick into tick-to-go-green. Do not add a checklist-done row to this file.",
+  "_tokens": "{{PLUGIN_SCRIPTS}} expands to the directory this manifest ships in, so the gate.mjs rows below survive a plugin update. checkpoint.mjs does the substitution.",
   "checks": [
     { "id": "prd", "label": "PRD exists", "kind": "mechanical", "type": "file-exists", "path": "docs/prd/prd.md" },
     { "id": "checklist", "label": "Acceptance checklist exists", "kind": "mechanical", "type": "file-exists", "path": "docs/prd/acceptance-checklist.md" },
     { "id": "plan", "label": "Implementation plan exists", "kind": "mechanical", "type": "file-exists", "path": "docs/implementation-plan.md" },
     { "id": "tests", "label": "Test suite passes", "kind": "mechanical", "type": "test-command", "expectExit": 0, "optional": true },
     { "id": "typecheck", "label": "Typecheck passes", "kind": "mechanical", "type": "command", "cmd": "npx --no-install tsc --noEmit", "expectExit": 0, "optional": true },
-    { "id": "acs-ticked", "label": "All acceptance criteria ticked", "kind": "mechanical", "type": "checklist-done", "path": "docs/prd/acceptance-checklist.md", "optional": true },
     { "id": "adr-index", "label": "ADR index present", "kind": "mechanical", "type": "file-exists", "path": "docs/adr/README.md", "optional": true },
-    { "id": "committed", "label": "Phase work committed & pushed", "kind": "semantic", "type": "advisory", "note": "confirm the phase branch is committed and pushed — nothing here forces it" },
-    { "id": "ui-review", "label": "UI reviewed vs the design system", "kind": "semantic", "type": "advisory", "note": "if this phase touched UI, run the ui-review skill before ticking" }
+    { "id": "coverage", "label": "Coverage meets the bar", "kind": "mechanical", "type": "command", "cmd": "node \"{{PLUGIN_SCRIPTS}}/gate.mjs\" coverage", "expectExit": 0, "optional": true },
+    { "id": "audit", "label": "No high dependency advisory", "kind": "mechanical", "type": "command", "cmd": "node \"{{PLUGIN_SCRIPTS}}/gate.mjs\" audit", "expectExit": 0, "optional": true },
+    { "id": "committed", "label": "Work committed and pushed", "kind": "mechanical", "type": "command", "cmd": "node \"{{PLUGIN_SCRIPTS}}/gate.mjs\" committed", "expectExit": 0, "optional": true },
+    { "id": "ui-review", "label": "UI review artefact exists", "kind": "mechanical", "type": "command", "cmd": "node \"{{PLUGIN_SCRIPTS}}/gate.mjs\" ui-review", "expectExit": 0, "optional": true }
   ]
 }

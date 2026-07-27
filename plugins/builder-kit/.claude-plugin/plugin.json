@@ -9,6 +9,5 @@
   "homepage": "https://ai.jiffi.co",
   "repository": "https://github.com/jiffi-co/claude-plugins",
   "license": "UNLICENSED",
-  "keywords": ["jiffi", "build", "workflow", "prd", "adr", "scaffold", "ci-cd", "ship", "iterate"],
-  "hooks": "./hooks/hooks.json"
+  "keywords": ["jiffi", "build", "workflow", "prd", "adr", "scaffold", "ci-cd", "ship", "iterate"]
 }

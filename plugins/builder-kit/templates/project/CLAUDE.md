@@ -21,6 +21,6 @@
 - Never commit secrets, API keys, or `.env` files.
 - One phase at a time. Never build the whole app in one go.
 - Feature branches only. Never commit directly to `main`.
-- Everything lives on disk: docs/, ADRs, the acceptance checklist and Beads are the source of truth, not chat.
+- Everything lives on disk: docs/, ADRs, the acceptance checklist and `docs/tasks/` are the source of truth, not chat.
 
 @AGENTS.md

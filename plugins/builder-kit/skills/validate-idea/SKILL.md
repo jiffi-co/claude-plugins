@@ -1,7 +1,7 @@
 ---
 name: validate-idea
-description: Use when the user is starting a new build, has a raw idea, or wants to validate an idea, before any Idea Pack or PRD work. Runs the Phase-0 six-question idea check, records the answers, and gates the move to idea-pack. Never answers the questions for the user.
-allowed-tools: [Read, Write, AskUserQuestion]
+description: Run the Phase-0 six-question idea check, record the answers in docs/idea/validation.md, and gate the move to idea-pack. Never answers the six questions for the human. Fires when a build is starting and docs/idea/validation.md is missing or does not pass.
+allowed-tools: [Read, Write, AskUserQuestion, Skill]
 ---
 
 # Validate Your Idea (Phase 0)

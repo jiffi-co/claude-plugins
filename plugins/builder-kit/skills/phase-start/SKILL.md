@@ -1,83 +1,35 @@
 ---
 name: phase-start
-description: Start one build phase by cutting the feature/phase-N branch, loading the phase from the implementation plan with its ACs and live Beads state, running a pre-flight consistency check, then driving the build one step at a time. Use when the user says "start phase N", "build the next phase", or /phase-start.
-allowed-tools: [Read, Edit, Bash, Grep, Glob, AskUserQuestion, Task]
+description: Deprecated alias for the build skill, kept for one release so published `/builder-kit:phase-start` blocks keep resolving. Forwards straight to build, which runs the same phase through an inline parent that owns every human gate and a forked worker that owns the mechanical span. Fires only when something invokes the old name.
+allowed-tools: [Read, Skill]
 ---
 
-# Phase Start
+# Phase Start (deprecated, use `build`)
 
-The load-bearing middle of the build. This gets one phase onto its own branch with fresh, verified context, then works it step by step until the phase's steps are done. Closing the phase out (full suite, AC sign-off, push, `bd close`) is the separate `phase-complete` skill.
+**This skill has moved. Invoke the `build` skill (`/builder-kit:build`) instead.**
 
-Read `experienceLevel` and `assistanceMode` from `.claude/builder-kit.json` (default beginner/coach); adapt tone and confirmation frequency, never fork the content, never skip a human gate.
+## What to do
 
-## When to use / when not
+Invoke `build` now, passing along whatever arguments came in (a phase number, `--mode step|auto`, `--spike`). Then say one line, once: *"`/builder-kit:phase-start` is now `/builder-kit:build`. Same phase, same gates."* Do not repeat the notice on later turns, and do not do any of the work here.
 
-- **Use** at the start of any build phase, once ADRs are accepted and `docs/implementation-plan.md` exists.
-- **Not** for closing a phase (use `phase-complete`), and not before the plan exists (run `plan` first).
+## Why it changed
 
-## Process
+`phase-start` did two jobs that cannot live in one place. Four of its steps ask a human something (execution mode, brief approval, the spike promote-or-discard gate, and the go-ahead before code), and the rest is a long mechanical span that wants its own clean context window.
 
-1. **Fresh context.** Confirm we are starting clean. If the window is already loaded from prior work, tell the user to `/clear` first. A phase begins on a clean context, no exceptions.
-2. **Load live state**, do not trust memory. If you use Beads:
-   ```bash
-   bd status          # where the project is, which issues are open
-   bd ready           # the issues unblocked and ready to work now
-   ```
-   Otherwise track the same state with native Tasks or a simple `docs/tasks.md` checklist. Read `docs/implementation-plan.md` (the matching phase section), `docs/prd/acceptance-checklist.md` (the ACs this phase owns), `AGENTS.md` (file ownership) and `docs/interfaces.md` (integration points). Use Grep/Glob to locate existing code the phase touches rather than reading whole files.
-3. **Cut the branch** from an up-to-date `main`, never build on `main`:
-   ```bash
-   git switch main && git pull
-   git switch -c feature/phase-<N>-<short-slug>
-   ```
-4. **Scaffold this phase's gate** at `docs/checkpoints/phase-<N>.json` so `/checkpoint <N>` verifies only THIS phase, not future phases' still-unticked criteria. ALWAYS scope the acceptance-criteria check to this phase's ACs with `match`; never scaffold an unscoped `checklist-done` for a non-final phase, or it fails demanding the WHOLE checklist ticked. A phase's ACs usually span several user-story numbers, so `match` is normally a multi-group regex (e.g. `AC-00[1-4]` for a phase that owns stories 1 to 4), not a single prefix. If this phase ships a browser bundle (web builds only), add a no-secret check scoped to the CLIENT bundle, the browser-served output (`.next/static` for Next, `dist/assets` for Vite), NOT the whole build directory, which false-positives on server-only node-trace files:
-   ```json
-   { "checks": [
-     { "id": "tests", "label": "Tests pass", "kind": "mechanical", "type": "test-command", "expectExit": 0 },
-     { "id": "acs", "label": "Phase <N> ACs ticked", "kind": "mechanical", "type": "checklist-done", "path": "docs/prd/acceptance-checklist.md", "match": "AC-00[1-4]" },
-     { "id": "no-client-secret", "label": "No secret in the client bundle", "kind": "mechanical", "type": "command", "cmd": "! grep -RniE 'sk-[A-Za-z0-9]{16,}|AI_KEY' .next/static", "expectExit": 0 }
-   ] }
-   ```
-5. **Pre-flight consistency check.** Before any code, verify and report:
-   - Prerequisite phases are complete (per the plan and, if you use Beads, `bd status`).
-   - Every library this phase uses. Check its **current** API with Context7 and flag anything deprecated or moved. Verify, do not recall.
-   - First build phase only: if the ADRs specify a database, stand up the local dev DB, wire `.env` from `.env.example`, run initial migrations, and confirm the connection before building against it.
-   - Present a phase brief: what is being built (user stories plus AC numbers), the ordered steps, the definition of done, and any drift you found between plan, ADRs and code.
-5. **Choose execution mode, ask do not assume** (AskUserQuestion): **Solo**, **Sub-agents** (background by default, good for a focused scoped task that reports back), or **Agent Team** (experimental, opt-in via `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`). Two independent phases can run in parallel git worktrees instead, so offer that when the plan marks phases parallelisable:
-   ```bash
-   git worktree add ../<project>-phase-<N> feature/phase-<N>-<slug>
-   ```
-6. **Gate: wait for the human's go-ahead** on the brief and the mode before writing code.
-7. **Drive the loop, one step at a time.** If a step means exploring an unknown API, proving a risky approach, or feeling out a UI shape before committing, offer the **Spike lane** (see below) for that step instead of the full ceremony. For each ordered step:
-   - State the step and the approach, then implement just that step.
-   - Run the relevant tests after each meaningful change.
-   - When they pass green, commit that increment (`git commit -m "phase <N>: <step>"`).
-   - Move to the next step. Do not paste all steps at once.
-8. **When stuck** on one problem after **two failed correction attempts**, stop. Do not keep patching a full context. Tell the user to `/clear`, then restart the step with a sharper, more constrained prompt. If your Claude Code has a `/debug` skill, reach for it on a bug that needs tracing back through the call stack (otherwise trace it inline), `/rewind` to undo a bad turn (conversation and code), and `gh run view --log-failed` on a CI failure.
-9. When all the phase's steps are done and tests are green, hand off to **`phase-complete`** for the closeout.
+A forked subagent gets that clean context, but it cannot ask: AskUserQuestion is stripped from every subagent in code, with no frontmatter escape. So a gate inside a fork does not pause, it disappears without a trace. The split is the answer:
 
-## Spike lane (labelled throwaway)
+| Skill | Runs | Owns |
+|---|---|---|
+| `build` | inline | every question: mode, brief, spike, the circuit breaker, and every hard stop |
+| `build-phase` | `context: fork`, `background: false` | the mechanical span of one phase, escalating on one greppable line |
 
-Some steps are learning, not building: an unfamiliar library, a risky architecture bet, a UI shape you need to see before you trust it. Forcing the full test plus `/checkpoint` ceremony onto exploratory code just slows the learning and tempts you to keep bad code because it was expensive. The spike lane relaxes the ceremony on purpose, in exchange for the code not counting until a gate.
-
-- **Declare it out loud.** Cut the spike on a clearly throwaway branch, `spike/phase-<N>-<slug>`, never on `feature/phase-<N>-<slug>`. The name is the label: everyone can see this code is provisional.
-- **Relaxed ceremony while in the lane.** You may skip the per-step tests-green rule and the `/checkpoint <N>` gate. Commit freely with `spike:` message prefixes, or do not commit at all. Move fast, learn the thing.
-- **The code does not count.** Nothing produced in the lane is done. It ticks no AC, merges into no feature branch, and reaches `main` under no circumstances until it clears the gate.
-- **Promote-or-discard gate (the human's call, ask with AskUserQuestion):**
-  - **Discard** (the default posture): delete the spike branch and its code. Keep only what you learned, append one line to `docs/evolve/friction-log.md` or record a Decision so the knowledge survives the code. Nothing merges.
-  - **Promote:** the spike does not fold in as-is. Rebuild it to ceremony on `feature/phase-<N>-<slug>`, write the tests, satisfy the phase's ACs, and pass `/checkpoint <N>`. Only then does the work count. Treat the spike as a reference you reimplement cleanly, not a diff you cherry-pick.
+The directory name is a published contract (see `PRINCIPLES.md`), so this file stays for at least one release rather than breaking every guide page, screenshot and habit that prints the old name. It will be removed once the guide set has caught up.
 
 ## Rules
 
-- Never commit to `main`. Every phase lives on `feature/phase-<N>-<slug>`, and you commit only after tests go green.
-- One step at a time. Handing the agent the whole phase at once is the failure mode this skill exists to prevent.
-- Verify library APIs with Context7 before planning code. Stale API recall is the dominant build bug.
-- The execution-mode choice and the go-ahead on the brief are the human's calls. Prompt, never auto-decide.
-- Load state from the on-disk plan and your tracker (if you use Beads: `bd status` / `bd ready`; otherwise native Tasks or `docs/tasks.md`), never from chat history.
-- Between phases, `/clear` is non-negotiable. Within a phase, after two dead-end corrections, `/clear` and rewrite.
-- A spike is throwaway by default. Labelled spike code never counts, never merges to a feature branch, and never ticks an AC until it passes the promote-or-discard gate and is rebuilt to ceremony (tests green, `/checkpoint <N>` passes).
+- Forward. Do not re-implement any of the loop here; two copies of the build discipline is how they drift.
+- Do not start a phase from this file, even if the arguments look unambiguous.
 
 ## Output
 
-- A new branch `feature/phase-<N>-<slug>` off `main`.
-- Incremental commits on that branch, each after a green test run.
-- No document writes of its own. Updates to `docs/prd/acceptance-checklist.md`, `CLAUDE.md` and `bd close` happen in `phase-complete`.
+Nothing of its own. `build` writes everything.

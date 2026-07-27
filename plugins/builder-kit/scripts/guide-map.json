@@ -1,0 +1,233 @@
+{
+  "note": "Canonical guide spine. Eight steps plus two reference pages, one row per page, shared by all three tracks. The plugin's copy is generated from this one in the publish step; if the two ever disagree, this file is right. servedBy points at whichever documents serve a step today, so the reader sees eight steps from day one even while six of them are still legacy pages. Read by scripts/build-guides.mts.",
+  "version": 1,
+  "steps": 8,
+  "tracks": [
+    {
+      "id": "web",
+      "dir": "web",
+      "seriesSlug": "prototype-creation",
+      "vocab": {
+        "thing": "your site",
+        "runTarget": "your browser",
+        "shipTarget": "a live URL",
+        "series": "prototype-creation"
+      }
+    },
+    {
+      "id": "ios",
+      "dir": "ios",
+      "seriesSlug": "prototype-creation-ios",
+      "vocab": {
+        "thing": "your app",
+        "runTarget": "the simulator",
+        "shipTarget": "TestFlight",
+        "series": "prototype-creation-ios"
+      }
+    },
+    {
+      "id": "agent",
+      "dir": "agent",
+      "seriesSlug": "agent-build-workflow",
+      "vocab": {
+        "thing": "your agent",
+        "runTarget": "your terminal",
+        "shipTarget": "a running agent",
+        "series": "agent-build-workflow"
+      }
+    }
+  ],
+  "pages": [
+    {
+      "step": 1,
+      "key": "start-here",
+      "slug": "start-here",
+      "title": "Start here",
+      "accessMode": "free",
+      "budget": 700,
+      "command": null,
+      "proves": "a monthly running-cost ceiling you have named",
+      "supersedes": [],
+      "servedBy": [
+        {
+          "page": "start-here",
+          "status": "new"
+        }
+      ]
+    },
+    {
+      "step": 2,
+      "key": "setup",
+      "slug": "setup",
+      "title": "Set up",
+      "accessMode": "signup",
+      "budget": 500,
+      "command": "/builder-kit:setup",
+      "proves": "a green line per tool",
+      "supersedes": [
+        "prerequisites",
+        "machine-setup",
+        "verify-setup"
+      ],
+      "servedBy": [
+        {
+          "page": "setup",
+          "status": "new"
+        }
+      ]
+    },
+    {
+      "step": 3,
+      "key": "start-your-project",
+      "slug": "start-your-project",
+      "title": "Start your project",
+      "accessMode": "signup",
+      "budget": 700,
+      "command": "/builder-kit:start",
+      "proves": "a scaffolded folder and a private remote",
+      "supersedes": [
+        "project-kickoff",
+        "continue-existing-work"
+      ],
+      "servedBy": [
+        {
+          "page": "start-your-project",
+          "status": "new"
+        }
+      ]
+    },
+    {
+      "step": 4,
+      "key": "shape-it",
+      "slug": "shape-it",
+      "title": "Shape it",
+      "accessMode": "signup",
+      "budget": 860,
+      "command": "/builder-kit:build",
+      "proves": "an Idea Pack, a PRD you approved, and a look you picked",
+      "supersedes": [
+        "idea-pack",
+        "prd",
+        "wireframes",
+        "brand"
+      ],
+      "servedBy": [
+        {
+          "page": "shape-it",
+          "status": "new"
+        }
+      ]
+    },
+    {
+      "step": 5,
+      "key": "decide-and-plan",
+      "slug": "decide-and-plan",
+      "title": "Decide and plan",
+      "accessMode": "signup",
+      "budget": 800,
+      "command": "/builder-kit:build",
+      "proves": "decision records on disk, a design system and a phased plan",
+      "supersedes": [
+        "architecture",
+        "implementation-plan"
+      ],
+      "servedBy": [
+        {
+          "page": "decide-and-plan",
+          "status": "new"
+        }
+      ]
+    },
+    {
+      "step": 6,
+      "key": "build-and-ship-your-first-slice",
+      "slug": "build-and-ship-your-first-slice",
+      "title": "Build and ship your first slice",
+      "accessMode": "signup",
+      "budget": 860,
+      "command": "/builder-kit:ship",
+      "proves": "a deployed thing at a real URL",
+      "supersedes": [
+        "build",
+        "test-and-verify",
+        "review-and-deploy"
+      ],
+      "servedBy": [
+        {
+          "page": "build-and-ship-your-first-slice",
+          "status": "new"
+        }
+      ]
+    },
+    {
+      "step": 7,
+      "key": "run-the-plan",
+      "slug": "run-the-plan",
+      "title": "Run the plan",
+      "accessMode": "member",
+      "budget": 600,
+      "command": "/builder-kit:build --mode auto",
+      "proves": "every phase in the plan shipped, or a failure with a name",
+      "supersedes": [],
+      "servedBy": [
+        {
+          "page": "run-the-plan",
+          "status": "new"
+        }
+      ]
+    },
+    {
+      "step": 8,
+      "key": "keep-going",
+      "slug": "keep-going",
+      "title": "Keep going",
+      "accessMode": "member",
+      "budget": 860,
+      "command": "/builder-kit:iterate",
+      "proves": "a monitored product and a rollback you have pulled once",
+      "supersedes": [
+        "operate-and-iterate"
+      ],
+      "servedBy": [
+        {
+          "page": "keep-going",
+          "status": "new"
+        }
+      ]
+    },
+    {
+      "step": null,
+      "key": "when-it-breaks",
+      "slug": "troubleshooting",
+      "title": "When it breaks",
+      "accessMode": "signup",
+      "budget": 1500,
+      "command": "/builder-kit:status",
+      "proves": "an unstuck session",
+      "supersedes": [],
+      "servedBy": [
+        {
+          "page": "when-it-breaks",
+          "status": "new"
+        }
+      ]
+    },
+    {
+      "step": null,
+      "key": "words",
+      "slug": "glossary",
+      "title": "Words that come up",
+      "accessMode": "free",
+      "budget": 800,
+      "command": null,
+      "proves": "a definition",
+      "supersedes": [],
+      "servedBy": [
+        {
+          "page": "words",
+          "status": "new"
+        }
+      ]
+    }
+  ]
+}

@@ -24,6 +24,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync, statSync, readdirSync } from 'node:fs'
 import { join, resolve, relative, extname, basename, dirname } from 'node:path'
 import { spawnSync } from 'node:child_process'
+import { getState } from './state.mjs'
 
 const MAX_FILE_BYTES = 256 * 1024
 const MAX_FILES = 25000 // hard ceiling so a pathological tree can never hang the walk
@@ -109,6 +110,26 @@ function isSchemaFile(rel) {
   return false
 }
 
+// Paths the builder-kit scaffold wrote into this very project moments ago. Counting
+// them describes the KIT, not the code the builder brought: a seven-file prototype
+// reported back as "32 files, 11 .md, 1 .ts", every one of the extras written by
+// `/builder-kit:start` on its way in. init.mjs records exactly what it created, so
+// this reads that rather than guessing at a name list that would drift.
+// Only applies when adopting the directory the manifest describes; pointed at some
+// other tree, there is nothing to exclude and nothing is excluded.
+const scaffoldPaths = (() => {
+  if (resolve(scanRoot) !== resolve(OUT)) return new Set()
+  const p = join(OUT, '.claude', 'builder-kit', 'scaffold-manifest.json')
+  try {
+    const m = JSON.parse(readFileSync(p, 'utf8'))
+    const files = Array.isArray(m && m.files) ? m.files.filter((f) => typeof f === 'string') : []
+    // The manifest and the config are the kit's too, and neither is in the file list.
+    return new Set([...files, '.claude/builder-kit.json', '.claude/builder-kit/scaffold-manifest.json'])
+  } catch {
+    return new Set()
+  }
+})()
+
 const tree = safe('tree scan', () => {
   const extCounts = {}
   const topLevel = []
@@ -118,9 +139,21 @@ const tree = safe('tree scan', () => {
   const componentFiles = []
   const schemaFiles = []
   const large = [] // [A] anti-pattern candidates (big single files)
+  const dirRels = [] // every directory seen, kept or not; filtered after the walk
+  const keptDirs = new Set() // directories that hold at least one file the builder wrote
+  const topLevelDirs = new Set()
   let files = 0
   let dirs = 0
+  let excluded = 0
   let truncated = false
+
+  const keep = (rel) => {
+    let i = rel.lastIndexOf('/')
+    while (i > 0) {
+      keptDirs.add(rel.slice(0, i))
+      i = rel.lastIndexOf('/', i - 1)
+    }
+  }
 
   const manifestDepth = {} // basename -> the depth it was found at (shallowest wins)
   const walk = (abs, rel, depth) => {
@@ -141,12 +174,17 @@ const tree = safe('tree scan', () => {
       const childRel = rel ? `${rel}/${e.name}` : e.name
       if (e.isDirectory()) {
         if (SKIP_DIRS.has(e.name)) continue
-        dirs++
-        if (depth === 0) topLevel.push(`${e.name}/`)
+        dirRels.push(childRel)
+        if (depth === 0) topLevelDirs.add(childRel)
         subdirs.push([join(abs, e.name), childRel])
         continue
       }
+      if (scaffoldPaths.has(childRel)) {
+        excluded++
+        continue
+      }
       files++
+      keep(childRel)
       if (depth === 0) topLevel.push(e.name)
       const ext = extname(e.name) || '(none)'
       extCounts[ext] = (extCounts[ext] || 0) + 1
@@ -171,9 +209,14 @@ const tree = safe('tree scan', () => {
   }
   walk(scanRoot, '', 0)
 
+  // A directory counts when something the builder wrote lives under it. A `docs/adr/`
+  // holding nothing but the scaffold's .gitkeep is the kit's, not theirs.
+  dirs = dirRels.filter((d) => keptDirs.has(d)).length
+  for (const d of topLevelDirs) if (keptDirs.has(d)) topLevel.push(`${d}/`)
+
   const topExts = Object.entries(extCounts).sort((a, b) => b[1] - a[1]).slice(0, 12)
   return {
-    files, dirs, truncated,
+    files, dirs, truncated, excluded,
     topLevel: topLevel.sort().slice(0, 40),
     topExts,
     manifests,
@@ -182,7 +225,7 @@ const tree = safe('tree scan', () => {
     large: large.sort((a, b) => b.kb - a.kb).slice(0, 10),
   }
 }, {
-  files: 0, dirs: 0, truncated: false, topLevel: [], topExts: [], manifests: {},
+  files: 0, dirs: 0, truncated: false, excluded: 0, topLevel: [], topExts: [], manifests: {},
   packageManagers: [], routeFiles: [], componentFiles: [], schemaFiles: [], large: [],
 })
 
@@ -407,7 +450,7 @@ const adr = `# ADR-0001: Tech stack (derived by /jiffi-adopt)
 ## Context
 This ADR was written by \`/jiffi-adopt\`, an offline heuristic scan of \`${relative(OUT, scanRoot) || '.'}\`. It read the manifests and the file tree and asked git for a commit heatmap. It did not run the code and did not ask the model, so every line here is a DERIVED [D] fact traced to a file in the Evidence table. High confidence is not proof: run the \`ingest\` skill and the \`review-ingest\` agent to confirm each one before you build on it.
 
-Repo shape: ${tree.files} files, ${tree.dirs} directories scanned${tree.truncated ? ` (walk hit the ${MAX_FILES}-file ceiling, this is a partial view)` : ''}. Package manager: ${tree.packageManagers.length ? tree.packageManagers.join(', ') : 'not detected'}.
+Repo shape: ${tree.files} files, ${tree.dirs} directories scanned${tree.excluded ? `, excluding the ${tree.excluded} file(s) the builder-kit scaffold wrote` : ''}${tree.truncated ? ` (walk hit the ${MAX_FILES}-file ceiling, this is a partial view)` : ''}. Package manager: ${tree.packageManagers.length ? tree.packageManagers.join(', ') : 'not detected'}.
 
 ## Decision (the stack the scan found)
 ${stackLines}
@@ -453,6 +496,7 @@ ${stackLines}
 
 ## Tree summary
 - Files: ${tree.files}, directories: ${tree.dirs}${tree.truncated ? ` (truncated at ${MAX_FILES})` : ''}
+${tree.excluded ? `- Excluded: ${tree.excluded} file(s) written by the builder-kit scaffold itself, so these counts describe what you brought, not what the kit added\n` : ''}
 - Top-level entries: ${tree.topLevel.map((e) => `\`${e}\``).join(', ') || '(none)'}
 - File types: ${tree.topExts.map(([e, n]) => `${e} (${n})`).join(', ') || '(none)'}
 
@@ -467,7 +511,7 @@ Flagged, not blocking. Confirm or dismiss each during \`ingest\`.
 ${bullets(antiPatterns, 'None the scanner could see. That is not proof the repo is clean, only that these cheap heuristics found nothing.')}
 
 ${warnings.length ? `## Scan warnings\nPhases that degraded gracefully rather than failing the run.\n\n${warnings.map((w) => `- ${w}`).join('\n')}\n` : ''}## Next
-Run the \`ingest\` skill to confirm the [D] facts, answer the [C] questions and fill the [G] gaps, then \`architect\`.
+Run \`/builder-kit:ingest\` to confirm the [D] facts, answer the [C] questions and fill the [G] gaps, then \`/builder-kit:architect\`.
 `
 
 // --- STUB idea-pack / prd / design (a scanner cannot infer intent) ------------
@@ -576,12 +620,20 @@ if (!existsSync(sourcesKeep)) {
 // ---------------------------------------------------------------------------
 // report
 // ---------------------------------------------------------------------------
+
+// One next step, read back off disk AFTER the writes, from the same state.mjs the
+// status line and the session re-ground use. This script used to print its own answer,
+// init.mjs printed a second, state.mjs a third and the guide page a fourth, all at the
+// same moment and none of them agreeing. The stubs this run just wrote do not count as
+// proof, so what comes back is the step still genuinely open.
+const nextStep = getState(OUT).nextCommand
+
 if (asJson) {
   console.log(JSON.stringify({
     scanRoot: relative(OUT, scanRoot) || '.',
     date: TODAY,
     tree: {
-      files: tree.files, dirs: tree.dirs, truncated: tree.truncated,
+      files: tree.files, dirs: tree.dirs, excluded: tree.excluded, truncated: tree.truncated,
       packageManagers: tree.packageManagers,
       routes: tree.routeFiles.length, components: tree.componentFiles.length, schemas: tree.schemaFiles.length,
       topExts: tree.topExts,
@@ -592,13 +644,13 @@ if (asJson) {
     warnings,
     written,
     snapshotted,
-    next: 'run the `ingest` skill to confirm the derived facts, then `architect`',
+    next: nextStep,
   }, null, 2))
   process.exit(0)
 }
 
 console.log(`\n/jiffi-adopt scanned ${relative(OUT, scanRoot) || '.'} offline (no model, no network).`)
-console.log(`  ${tree.files} files, ${tree.dirs} dirs${tree.truncated ? ` (truncated at ${MAX_FILES})` : ''}`)
+console.log(`  ${tree.files} files, ${tree.dirs} dirs${tree.excluded ? ` (${tree.excluded} builder-kit scaffold file(s) excluded)` : ''}${tree.truncated ? ` (truncated at ${MAX_FILES})` : ''}`)
 console.log(`  stack: ${[...stack.values()].map((t) => t.label).join(', ') || '(none detected)'}`)
 console.log(`  surface: ${tree.routeFiles.length} routes, ${tree.componentFiles.length} components, ${tree.schemaFiles.length} schemas`)
 if (antiPatterns.length) console.log(`  [A] ${antiPatterns.length} anti-pattern flag(s), see the scan report`)
@@ -614,5 +666,7 @@ if (snapshotted.length) {
 }
 
 console.log('\nThe ADR is REAL (traced to files). The idea-pack, PRD and design files are STUBS: a scanner cannot infer intent.')
-console.log('Next: run the `ingest` skill to confirm the derived facts, then `architect`.')
+console.log('A stub does not count as a step done: the kit still reads those stages as open until the gaps are filled.')
+console.log(`Next: ${nextStep}`)
+console.log('      it confirms the derived facts, fills the gaps one question at a time, then hands to /builder-kit:architect')
 process.exit(0)

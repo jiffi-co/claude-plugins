@@ -1,6 +1,6 @@
 ---
 name: ci-setup
-description: Use once per repo when the user has their first PR up and asks to set up CI/CD, automated PR review, branch protection or secret scanning, or names the ci-setup skill. Adapts the test/build gate to the project type (web, iOS or agent). One-time hardening, not a per-PR step.
+description: Wire up automated PR review, a build-and-test gate, branch protection and secret scanning, adapted to the project type (web, iOS or agent). One-time hardening per repo, not a per-PR step. Fires when git has a remote, a first PR is open, and .github/workflows/ is missing or empty.
 allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, AskUserQuestion]
 ---
 
@@ -21,7 +21,7 @@ No remote listed means the repo has never been pushed, so there is nothing on Gi
 
 ## When to use / when not
 
-- Use when: first PR is up (see the ship skill), no `.github/workflows/` exists yet, and the user wants automated review + gates.
+- Use when: git has a remote, the first PR is up (see the ship skill), and no `.github/workflows/` exists yet.
 - Skip when: CI already exists (check `.github/workflows/` first) — this is one-time, not per-PR.
 - Not a substitute for human review: the workflow adds a second opinion, a person still approves.
 
@@ -57,7 +57,7 @@ No remote listed means the repo has never been pushed, so there is nothing on Gi
 
    **ios (`projectType` "ios"): build + test on a macOS runner**
    - `.github/workflows/ios-ci.yml`: runs on `macos-14`, triggered by `pull_request` and push to `main`. Steps: checkout; pin the Xcode version (`maxim-lobanov/setup-xcode`); if the scaffold uses XcodeGen, run `xcodegen generate`; resolve Swift packages (`xcodebuild -resolvePackageDependencies`); run `xcodebuild test` against a simulator the runner image provides (for example `-destination 'platform=iOS Simulator,name=iPhone 15'`), then `xcodebuild build`. Name the job `ios-build-test`.
-   - Optional `.github/workflows/ios-beta.yml`: a `fastlane beta` lane that uploads a build to TestFlight, triggered by `workflow_dispatch` or a version tag, never on every PR (macOS minutes and code signing make per-PR uploads wasteful). Only write it if the repo already has a `Fastfile` (from the scaffold or `fastlane init`) and the user wants it; it needs the App Store Connect API key secrets from step 6. No `Fastfile`? Skip it and say so, and do not fabricate a signing or upload flow.
+   - Optional `.github/workflows/ios-beta.yml`: a `fastlane beta` lane that uploads a build to TestFlight, triggered by `workflow_dispatch` or a version tag, never on every PR (macOS minutes and code signing make per-PR uploads wasteful). Only write it if the repo already has a `Fastfile` (from the scaffold or `fastlane init`) and the human confirms it; it needs the App Store Connect API key secrets from step 6. No `Fastfile`? Skip it and say so, and do not fabricate a signing or upload flow.
    - macOS runners bill at a higher minute multiplier and start slower than Linux runners. That is normal for iOS CI, worth a one-line heads-up to the user.
 
    **agent (`projectType` "agent"): eval suite + deploy artifact**

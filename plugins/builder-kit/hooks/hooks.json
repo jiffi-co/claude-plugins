@@ -1,4 +1,6 @@
 {
+  "_comment": "Hook registrations. TWO hooks here can block a turn and no others: secret-scan (PreToolUse, exit 2) and stop-test-gate (Stop, exit 2). Every other hook exits 0 on every path including its failure paths, so a bug in autosave, git-allow, hard-stop or task-mirror costs a snapshot or a prompt, never a build. Timeouts are SECONDS. `async: true` means the model never waits. Event names come from the 2.1.220 hook registry read out of the binary, not from guesswork. A block renders NOTHING in the Claude Code panel of Claude Desktop, which is why every blocking hook also writes .claude/builder-kit/last-block.md via hooks/block-report.mjs.",
+  "_do_not_declare_this_file_in_plugin_json": "Claude Code loads hooks/hooks.json automatically. Naming it again as `hooks` in .claude-plugin/plugin.json makes the loader refuse BOTH copies with `Hook load failed: Duplicate hooks file detected`, and the plugin then reports enabled:true with a non-empty errors[], which reads as healthy in every summary view while every hook here is dead. manifest.hooks is only for ADDITIONAL hook files.",
   "hooks": {
     "PreToolUse": [
       {
@@ -6,7 +8,36 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/secret-scan.mjs\""
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/secret-scan.mjs\"",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/git-allow.mjs\"",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/hard-stop.mjs\"",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/autosave.mjs\" --event=PostToolUse",
+            "async": true,
+            "timeout": 30
           }
         ]
       }
@@ -16,7 +47,58 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/session-reground.mjs\""
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/session-reground.mjs\"",
+            "timeout": 20
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/autosave.mjs\" --event=SessionEnd",
+            "timeout": 20
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/autosave.mjs\" --event=PreCompact",
+            "timeout": 20
+          }
+        ]
+      }
+    ],
+    "TaskCreated": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/task-mirror.mjs\"",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "TaskCompleted": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/task-mirror.mjs\"",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/autosave.mjs\" --event=TaskCompleted",
+            "async": true,
+            "timeout": 30
           }
         ]
       }
@@ -26,7 +108,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/stop-test-gate.mjs\""
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/stop-test-gate.mjs\"",
+            "timeout": 300
           }
         ]
       }

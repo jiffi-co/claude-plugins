@@ -7,6 +7,40 @@
 // every write because it itself broke (e.g. a missing `jq`) is worse than none —
 // it makes the whole plugin look broken on a beginner's machine. Node is always
 // present in a Claude Code project, so this has no external dependency.
+//
+// Every block is also recorded to .claude/builder-kit/last-block.md, because Claude
+// Desktop renders nothing when a hook blocks and the user would otherwise see a hang.
+
+// Loaded dynamically on purpose. A static import of a file that failed to ship, or
+// that has a syntax error, would take the whole guard down with it and turn every
+// secret write into a silent pass. The block must survive the reporter being broken,
+// so a load failure costs the file, not the guard.
+let reportBlock = null
+try {
+  ;({ reportBlock } = await import('./block-report.mjs'))
+} catch {
+  reportBlock = null
+}
+
+// The stderr text for a block, with or without the reporter. Both paths tell the
+// model to speak up, which is the part Desktop users depend on.
+//
+// The try is load-bearing, not decoration. This runs inside the hook's outer
+// fail-open catch, so a reporter that throws would be caught up there and exit 0,
+// silently turning a blocked secret into an allowed write. The invariant has to
+// hold here, at the call site, rather than by trusting the callee.
+function deny(o) {
+  try {
+    if (typeof reportBlock === 'function') return reportBlock(o)
+  } catch {
+    // fall through to the message below
+  }
+  return (
+    `BLOCKED by builder-kit (${o.hook}).\n\n${o.reason}\n\n${o.remedy}\n\n` +
+    'Tell the user what was blocked and why. In the Claude Code panel of Claude Desktop ' +
+    'a blocked turn renders nothing at all, so unless you say it they see a hang.\n'
+  )
+}
 
 let raw = ''
 process.stdin.setEncoding('utf8')
@@ -26,8 +60,14 @@ process.stdin.on('end', () => {
     // (placeholders) are fine and must not be blocked.
     if (/(^|\/)\.env(\.[A-Za-z0-9]+)*$/.test(path) && !/\.example$/.test(path)) {
       process.stderr.write(
-        `Refusing to write a secret-bearing env file (${path}). ` +
-          `Use .env.example with placeholder values, and keep real values out of the repo.\n`,
+        deny({
+          hook: 'secret-scan',
+          stopId: 'C-SEC',
+          root: input.cwd,
+          reason: `Refused to write a secret-bearing env file (${path}). Real env files do not belong in the repo.`,
+          remedy:
+            'Write .env.example with placeholder values instead, and keep the real values in the environment.',
+        }),
       )
       process.exit(2)
     }
@@ -38,9 +78,18 @@ process.stdin.on('end', () => {
       /(sk_live_[A-Za-z0-9]{16,}|rk_live_[A-Za-z0-9]{16,}|sk-ant-[A-Za-z0-9_-]{20,}|sk-proj-[A-Za-z0-9_-]{20,}|sk-[A-Za-z0-9]{32,}|AIza[0-9A-Za-z_-]{35}|AKIA[0-9A-Z]{16}|-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|xox[baprs]-[A-Za-z0-9-]{10,}|gh[pousr]_[A-Za-z0-9]{36})/
     if (liveSecret.test(content)) {
       process.stderr.write(
-        'Refusing to write: the content contains what looks like a LIVE secret ' +
-          '(API key, private key, or token). Move it to an environment variable and ' +
-          'reference it via process.env / import.meta.env instead.\n',
+        deny({
+          hook: 'secret-scan',
+          stopId: 'C-SEC',
+          root: input.cwd,
+          reason:
+            `Refused to write ${path || 'this file'}: the content carries what looks like a LIVE ` +
+            'secret (an API key, a private key, or a token).',
+          remedy:
+            'Move the value into an environment variable and reference it via process.env or ' +
+            'import.meta.env. If it has already been committed or shipped to a client bundle, ' +
+            'treat it as compromised and rotate it at the provider.',
+        }),
       )
       process.exit(2)
     }

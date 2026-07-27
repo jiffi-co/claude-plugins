@@ -1,6 +1,6 @@
 ---
 name: decision-log
-description: Use when the user confirms a choice and asks to record it, or says "log it" / "log this decision" / "add to the decision log". Appends one dated entry to docs/decisions.md so the choice survives outside chat.
+description: Append one dated entry to docs/decisions.md (date, decision, why, supersedes) so a settled choice lives on disk instead of in chat. Records a choice already made, never makes one. Fires the moment a choice is settled and neither docs/decisions.md nor docs/adr/ carries it yet.
 allowed-tools: [Bash, Read, Edit, Write, AskUserQuestion]
 ---
 
@@ -12,7 +12,7 @@ Appends one short, greppable entry to `docs/decisions.md` (date, decision, why, 
 
 - Use when the human has already MADE a decision and wants it recorded: "log it", "log this decision", "add that to the decision log", or right after they confirm a choice (architecture, tool, naming, scope trade-off).
 - Do not use to make or recommend the decision. That is the human's call, and other gates (architecture, design-system, PRD approval) own it. This skill only records a choice already made.
-- Do not use for task tracking (that is Beads) or for ADRs (a full architectural decision belongs in `docs/adr/` via the create-adr skill; log a one-line pointer here if it helps).
+- Do not use for task tracking (that is `docs/tasks/`) or for ADRs (a full architectural decision belongs in `docs/adr/` via the create-adr skill; log a one-line pointer here if it helps).
 
 ## Process
 

@@ -8,10 +8,20 @@
 //   node checkpoint.mjs [phase] [--manifest <path>] [--json]
 //
 // Manifest resolution order (first that exists):
-//   1) --manifest <path>
+//   1) --manifest <path>   NAMED EXPLICITLY, so a path that does not exist is an
+//      ERROR (exit 2), never a fall-through. The close gate is run as
+//      `--manifest docs/checkpoints/phase-<N>-close.json`; falling back from a
+//      missing close manifest to the lenient shipped default would run the WRONG
+//      GATE and report a green phase, which is the exact failure the build/close
+//      split exists to prevent.
 //   2) docs/checkpoints/phase-<phase>.json   (when a phase arg is given)
 //   3) docs/checkpoints/checkpoint.json
 //   4) <plugin>/scripts/checkpoint-manifest.json   (the shipped default)
+//
+// A `cmd` string may contain {{PLUGIN_SCRIPTS}}, which expands to this script's
+// own directory. The shipped manifests use it to reach gate.mjs: an absolute path
+// baked at authoring time points at one machine, and a ${CLAUDE_PLUGIN_ROOT}
+// carries the plugin VERSION, so both break on the next update.
 //
 // Each check: { id, label, kind: "mechanical" | "semantic", type, ...args,
 //               phases?: number[], optional?: boolean }
@@ -42,13 +52,26 @@ const phaseArg = args.find((a) => /^\d+$/.test(a)) || null
 const phase = phaseArg ? Number(phaseArg) : null
 
 function resolveManifest() {
+  if (manifestArg) {
+    if (existsSync(manifestArg)) return manifestArg
+    console.error(`Manifest not found: ${manifestArg}`)
+    console.error('It was named explicitly, so nothing was substituted for it and NOTHING WAS VERIFIED.')
+    console.error('This is not a pass. Write that manifest, or run without --manifest to use the project gate.')
+    process.exit(2)
+  }
   const candidates = [
-    manifestArg,
     phase != null ? `docs/checkpoints/phase-${phase}.json` : null,
     'docs/checkpoints/checkpoint.json',
     join(HERE, 'checkpoint-manifest.json'),
   ].filter(Boolean)
   return candidates.find((p) => existsSync(p)) || null
+}
+
+// {{PLUGIN_SCRIPTS}} -> this script's directory. See the header: the alternatives
+// are an absolute path that only works on the machine that wrote it, or a
+// versioned ${CLAUDE_PLUGIN_ROOT} that dies at the next plugin update.
+function expandTokens(cmd) {
+  return String(cmd).replaceAll('{{PLUGIN_SCRIPTS}}', HERE)
 }
 
 function readFileSafe(p) {
@@ -82,10 +105,23 @@ function runCheck(c) {
   try {
     switch (c.type) {
       case 'command': {
-        const r = spawnSync(c.cmd, { shell: true, encoding: 'utf8', timeout: 600000 })
+        const cmd = expandTokens(c.cmd)
+        const r = spawnSync(cmd, { shell: true, encoding: 'utf8', timeout: 600000 })
         const code = r.status == null ? 1 : r.status
         const want = c.expectExit ?? 0
-        const evidence = `exit ${code} (expected ${want})${r.error ? ` — ${r.error.message}` : ''}`
+        // Carry the command's own last line of output into the evidence. An exit
+        // code alone cannot tell a PASS from a SKIP: `gate.mjs coverage` exits 0
+        // both when coverage cleared the bar and when the project has no coverage
+        // command at all, and the second one reading as a green tick is exactly
+        // the false green this gate exists to stop. The command already says which
+        // it was, in its own words; this is what lets a reader see it.
+        const tail = (r.stdout || '')
+          .split('\n')
+          .map((l) => l.trim())
+          .filter(Boolean)
+          .pop()
+        const said = tail ? ` — ${tail.length > 140 ? `${tail.slice(0, 140)}…` : tail}` : ''
+        const evidence = `exit ${code} (expected ${want})${r.error ? ` — ${r.error.message}` : ''}${said}`
         return { pass: code === want, evidence }
       }
       case 'test-command': {

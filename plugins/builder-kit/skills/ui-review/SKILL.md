@@ -1,6 +1,6 @@
 ---
 name: ui-review
-description: Use when a build phase touched the user-facing surface and the user asks to review it, or names the ui-review skill, to take a rigorous second look at what was built against the spec. The surface branches on projectType in .claude/builder-kit.json. On web it boots the app, drives the real user journeys with Playwright across three fixed viewports in light and dark, and scores each screenshot against a fixed nine-criterion rubric before it lets the ship gate pass; on ios it drives the app in a simulator (screenshots + XCUITest); on agent it runs its eval scenarios and reviews the transcripts. Also run once more before ship/deploy.
+description: Take a rigorous second look at what a phase built against its spec. The surface follows projectType in .claude/builder-kit.json, so web boots the app and drives the real user journeys with Playwright across three fixed viewports in light and dark, scoring every screenshot against a fixed nine-criterion rubric, ios drives the app in a simulator (screenshots plus XCUITest), and agent runs its eval scenarios and reviews the transcripts. Fires when the open phase's diff touched the user-facing surface, and once more before ship.
 allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, AskUserQuestion, mcp__playwright__browser_navigate, mcp__playwright__browser_resize, mcp__playwright__browser_take_screenshot, mcp__playwright__browser_snapshot, mcp__playwright__browser_console_messages, mcp__playwright__browser_network_requests, mcp__playwright__browser_click, mcp__playwright__browser_evaluate]
 ---
 
@@ -49,6 +49,14 @@ This is the vision-verified ship gate: the differentiator that catches "green bu
    - mobile 375x667
 
    That is six frames per waypoint. Capture console messages and failed network requests as you go, per waypoint, so clauses 2 to 4 of the ship contract below have evidence.
+
+   **Name the output file on every single screenshot call.** Pass an explicit project-relative path:
+
+   ```
+   docs/evidence/phase-<N>/<screen>-<width>-<theme>.png
+   ```
+
+   Create `docs/evidence/phase-<N>/` first. The browser MCP writes to whatever directory it believes it is in when no filename is given, which is not necessarily this project and has in practice been an unrelated repository three levels up — a reader silently accumulating build artefacts in someone else's tree, with nothing in the review saying where the frames went. The review's evidence lives under the project, beside `docs/checkpoints/`, or it is not evidence anyone can find. Reference these paths in the report so a later reader can open the exact frame a finding is about.
 4. **Score each frame against the nine-criterion rubric.** Read each screenshot back (the Read tool renders PNGs) and score it, applying the judging discipline above (negative question first, confidence floor, abstain when you cannot see it). The nine criteria:
    1. **intent-match** (does the frame do what the spec says this waypoint is for)
    2. **layout** (nothing overlapping, clipped, overflowing, or collapsed)
@@ -122,8 +130,9 @@ Run axe and Lighthouse with the project's own tooling if it has it. Otherwise in
    ```bash
    xcrun simctl ui booted appearance dark        # then: light
    xcrun simctl ui booted content_size accessibility-extra-large   # Dynamic Type stress
-   xcrun simctl io booted screenshot <path>.png
+   xcrun simctl io booted screenshot docs/evidence/phase-<N>/<screen>-<device>-<appearance>.png
    ```
+   Always name the path, and always under the project. Create `docs/evidence/phase-<N>/` first. Review artefacts that land wherever a tool's default working directory happened to point are artefacts nobody can find again.
    Read each screenshot back (the Read tool renders PNGs) to review it. Repeat the boot/install on a second device size (e.g. iPhone SE and a Pro Max) for the breakpoint spread.
 4. **Score each screen.** This is the vision gate adapted to the simulator: score each screenshot on the same nine-criterion rubric and four-rung ladder as web (intent-match, layout, visual hierarchy, typography, spacing, brand, visual-a11y, responsiveness, polish; pass / pass-with-notes / fail / cannot-verify), applying the judging discipline above. Add the platform floor from Apple's Human Interface Guidelines: tap targets >= 44 pt, safe-area and notch/Dynamic Island insets, control states, motion (respects Reduce Motion), VoiceOver labels and heading order, and Dynamic Type without truncation. Log each finding as `[SCREEN] [APPEARANCE] [SEVERITY] [CRITERION] [FINDING]`, specific value and target named.
 5. **Contrast is a hard fail, against the contract.** Enforce the same WCAG AA contrast contract as web (the role-pair walk from `MASTER.md`: >= 4.5:1 normal text, >= 3:1 large text and non-text) in BOTH appearances. Measure from the rendered pixels or the colour tokens, do not eyeball. Any sub-threshold pair is CRITICAL and blocks completion until fixed.
@@ -161,7 +170,7 @@ This is a behaviour review, not a visual one: an agent has no UI, so there is no
 
 ## Output
 
-`docs/checkpoints/ui-review-[phase].md`, containing:
+`docs/checkpoints/ui-review-[phase].md`, plus every captured frame under `docs/evidence/phase-<N>/`, containing:
 - Date, phase, `projectType`, and the list of journeys / pages / screens / scenarios reviewed (with why each was in scope).
 - For web/ios: the vision scorecard, one row per waypoint/screen per viewport per theme, with its rubric verdict (pass / pass-with-notes / fail / cannot-verify) across the nine criteria.
 - Findings table: subject (journey+waypoint / screen / scenario), viewport and theme or appearance (web/ios), severity, criterion, the specific finding (element, measured value, target), principle.

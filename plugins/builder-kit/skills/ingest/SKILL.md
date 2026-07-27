@@ -1,7 +1,7 @@
 ---
 name: ingest
-description: Bring an existing prototype (Lovable, v0, Bolt, Cursor, Claude Artifacts, or a repo) or a partial build INTO the workflow and continue it instead of restarting greenfield. Classify and scan the sources, tag every derived fact with a confidence model (Derivable, Confirmable, Gap, Anti-pattern) and cite its provenance, then hand off to the architect skill. Use when someone already has a prototype, a repo, a brief, or a brand and wants to continue rather than start from scratch.
-allowed-tools: [Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion, Task]
+description: Bring an existing prototype (Lovable, v0, Bolt, Cursor, Claude Artifacts, or a repo) or a partial build into the workflow and continue it instead of restarting greenfield. Scan and classify the sources, tag every derived fact with a confidence model (Derivable, Confirmable, Gap, Anti-pattern) and cite its provenance, then hand off to architect. Fires when code, a brief, a brand guide or screenshots already exist on disk or under docs/ingest/sources/ and docs/idea/ does not.
+allowed-tools: [Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion, Agent, Skill]
 ---
 
 # Ingest
@@ -44,7 +44,7 @@ The continue-state on-ramp. Most people who reach this workflow are not at a bla
 
 8. **Run the reviewer, write the Reception review, run the floor check, hand off to architect.**
 
-   First, before you rely on any [D] fact, run the **`review-ingest`** reviewer via the Task tool over the derived artifacts, `docs/decisions.md`, `docs/ingest/bible.md`, and the citations. It downgrades over-confident [D] facts to [C]. **Confirm it actually ran and returned a verdict**: a reviewer that silently failed to launch looks identical to a clean pass, and a wrong [D] fact looks identical to a right one until someone checks. Apply its downgrades before hand-off, and write the verdict into the review (see the REVIEWER-VERDICT block below).
+   First, before you rely on any [D] fact, run the **`review-ingest`** reviewer via the Agent tool over the derived artifacts, `docs/decisions.md`, `docs/ingest/bible.md`, and the citations. It downgrades over-confident [D] facts to [C]. **Confirm it actually ran and returned a verdict**: a reviewer that silently failed to launch looks identical to a clean pass, and a wrong [D] fact looks identical to a right one until someone checks. Apply its downgrades before hand-off, and write the verdict into the review (see the REVIEWER-VERDICT block below).
 
    Write `docs/ingest/reception.md` with these sections, in the builder's plain language:
    - **What I have.** The derived and confirmed facts, grouped, each with its tag and citation, so the human sees exactly what was taken from their prototype.

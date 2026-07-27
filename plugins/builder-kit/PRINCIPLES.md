@@ -51,6 +51,17 @@ A visual choice is shown, never described. Whenever a skill offers a palette, ty
 
 No sycophantic openers, no filler, no praise the work has not earned. Plain, direct language. Australian English. No em dashes (use commas, periods, or parentheses). Name the stakes: say what breaks if a choice is wrong, not just that a choice exists.
 
+## Naming is a published contract
+
+A skill's **directory name is canonical**. Claude Code registers every entry in this plugin as `/builder-kit:<name>`, where `<name>` is the folder name under `skills/` or the file name under `commands/`. Skills and commands share one flat namespace; the harness draws no distinction between them. The frontmatter `name` field is only a secondary alias, and `description` has no bearing on the invocation string at all.
+
+Two consequences, both one-way doors:
+
+- **Renaming a directory breaks every published command block.** Every guide page, doc and screenshot printing `/builder-kit:<old-name>` stops resolving, and it fails at the harness before any model call, so the reader gets "Unknown command" and nothing else. Nothing in this repo errors, no test goes red, and the breakage surfaces for the first time in front of a user. Treat a rename as a publishing event: add the new directory, keep the old one as a thin deprecated alias for at least one release, and update the guide set in the same change.
+- **Renaming only the frontmatter `name` changes nothing that matters.** The registered, listed command keeps the directory name; the frontmatter name resolves as an unlisted alias, so nothing errors and nothing is fixed. That silence is the trap: anyone who "renames" a skill that way has shipped a metadata edit, while every guide, slash menu and inventory still carries the old directory name.
+
+The same rule holds for `commands/*.md`, where the file name is the invocation key.
+
 ## Evolve
 
 When a gate fails, a marked recommendation is overridden, or a manual workaround was needed, append one row to `docs/evolve/friction-log.md`:
@@ -59,7 +70,7 @@ When a gate fails, a marked recommendation is overridden, or a manual workaround
 | date | skill | step | what-broke | what-the-user-did |
 ```
 
-The `/jiffi-evolve` command later reads that log, clusters recurring frictions, and proposes bounded edits to the skills, gated by the test suite. One row now saves a stale skill later.
+The `/builder-kit:jiffi-evolve` command later reads that log, clusters recurring frictions, and proposes bounded edits to the skills, gated by the test suite. One row now saves a stale skill later.
 
 ---
 
@@ -73,7 +84,7 @@ Every framed choice carries three things:
 - **A one-sentence why.** Why the recommended default is the default, in terms the builder feels.
 - **A reversibility tag.** `[easy to change later]`, `[costly to change later]`, or `[one-way door]`. A builder rushes a reversible choice and slows down on a one-way door, but only if you tell them which it is.
 
-Coach mode presents one decision at a time in plain language and asks before any binding or irreversible step. Execute mode is terser and assumes competence but still stops at the four gates. Auto mode chains the non-binding steps and stops only at the four gates and anything irreversible.
+Coach mode presents one decision at a time, worded for a non-engineer, and asks before any binding or irreversible step. Execute mode is terser and assumes competence but still stops at the four gates. Auto mode chains the non-binding steps and stops only at the four gates and anything irreversible.
 
 ## Appendix: refinement cheatsheet
 

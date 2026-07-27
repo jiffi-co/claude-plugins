@@ -3,6 +3,10 @@ node_modules/
 .env.*
 !.env.example
 
+# builder-kit's scratch state: the last-block record and its stamps. Local to your
+# machine and rewritten constantly. docs/ stays tracked deliberately, it is the record.
+.claude/builder-kit/
+
 # Framework build/output (keep the ones your stack uses, drop the rest)
 dist/
 build/

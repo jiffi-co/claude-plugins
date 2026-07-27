@@ -70,6 +70,18 @@ secrets, and tool-scope. Hold the line on all three:
 
 ## Where builder-kit picks up
 
-The build workflow is the same spine as every builder-kit project. From here:
-`/validate-idea` to pressure-test the idea, then `/idea-pack`, `/prd`,
-`/architect`, `/implementation-plan`, and into the phase-by-phase build loop.
+The build workflow is the same spine as every builder-kit project. Every command
+is `/builder-kit:` followed by a name, and `/builder-kit:status` will always tell
+you which one is next. From here: `/builder-kit:validate-idea` to pressure-test
+the idea, then `/builder-kit:idea-pack`, `/builder-kit:prd`,
+`/builder-kit:architect`, `/builder-kit:implementation-plan`, and into the
+phase-by-phase build loop with `/builder-kit:build`.
+
+## If this was scaffolded over code you already had
+
+The scaffold never overwrites a file that was already there, so a project that
+already had a `package.json` kept its own. That means the three commands above
+(`npm start`, `npm test`, `npm run eval`) run **your** scripts, not the agent's,
+and the `start` command wrote out exactly which scripts were missing and the one
+line that adds each. Until you have added them, the `Run it` and `Evals` sections
+above describe scripts this project does not have.
